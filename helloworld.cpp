@@ -10,12 +10,14 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszA
     HWND hwnd;
     MSG messages;
 
+    // Set properties of the window class.
     wincl.hInstance = hThisInstance;
     wincl.lpszClassName = szClassName;
     wincl.lpfnWndProc = WindowProcedure;
     wincl.style = CS_DBLCLKS;
     wincl.cbSize = sizeof(WNDCLASSEX);
 
+    // Load icons and cursors for the window.
     wincl.hIcon = LoadIcon(NULL, IDI_APPLICATION);
     wincl.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
     wincl.hCursor = LoadCursor(NULL, IDC_ARROW);
@@ -24,9 +26,11 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszA
     wincl.cbWndExtra = 0;
     wincl.hbrBackground = (HBRUSH)COLOR_BACKGROUND;
 
+    // Register the window class.
     if (!RegisterClassEx(&wincl))
         return 0;
 
+    // Create the window.
     hwnd = CreateWindowEx(
         0,
         szClassName,
@@ -42,9 +46,11 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszA
         NULL
     );
 
+    // Display the window on the screen.
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
+    // Message loop: Retrieve and dispatch messages until a WM_QUIT message is received.
     while (GetMessage(&messages, NULL, 0, 0))
     {
         TranslateMessage(&messages);
@@ -58,6 +64,23 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 {
     switch (message)
     {
+        case WM_PAINT:
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+
+            // The text to be displayed.
+            const char* text = "All work and no play makes Jack a dull boy";
+            
+            // Loop to display the text multiple times.
+            for (int y = 0; y < 300; y += 20) {
+                TextOut(hdc, 10, y, text, strlen(text));
+            }
+
+            EndPaint(hwnd, &ps);
+        }
+        break;
+
         case WM_DESTROY:
             PostQuitMessage(0);
             break;

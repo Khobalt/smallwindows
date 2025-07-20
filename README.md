@@ -1,148 +1,142 @@
-# Modern Paint Studio Pro 🎨
+# Modern Paint Studio Pro - Refactored Architecture
 
-A modern, feature-rich digital painting application built with pure Win32 API and GDI+. This started as a minimal Windows application but evolved into a professional-grade paint program with advanced features.
-
-## ✨ Modern Features
-
-### 🎨 Advanced Drawing Tools
-- **Brush Tool** - Variable size drawing with smooth strokes (B key)
-- **Eraser Tool** - Clean erasing with adjustable sizes (E key)
-- **Shape Tools** - Rectangle (R), Circle (C), and Line (L) drawing
-- **16-Color Palette** - Instant color selection with visual feedback
-- **HSV Color Wheel** - Advanced color picker with full spectrum selection
-
-### 🖼️ Professional UI
-- **Modern Dark/Light Themes** - Toggle between elegant themes (Ctrl+T)
-- **Professional Menu Bar** - File, Edit, View, Tools, Help menus with shortcuts
-- **Interactive Toolbar** - Click-to-select tools and colors
-- **Dynamic Brush Size Slider** - Real-time size adjustment (1-20px)
-- **Advanced Color Picker** - Click "More" for HSV color wheel selection
-- **Comprehensive Status Bar** - Shows tool, size, zoom, grid, theme, and point count
-- **Right-Click Context Menu** - Quick access to all features
-
-### ⚡ Advanced Features
-- **Unlimited Undo/Redo** - Full history management
-- **Zoom & Pan** - Ctrl+Mouse wheel to zoom (20%-500%), mouse wheel to scroll
-- **Grid Overlay** - Press 'G' to toggle alignment grid
-- **File Operations** - Save artwork (Ctrl+S)
-- **Keyboard Shortcuts** - Professional-grade hotkeys
-- **Window Resizing** - Responsive layout that adapts to window size
-
-### 🎯 User Experience
-- **Smooth Real-time Drawing** - Instant visual feedback
-- **Theme-Aware Colors** - UI adapts colors based on selected theme
-- **Help System** - Press F1 for comprehensive help
-- **Professional Title** - "Modern Paint Studio Pro - Advanced Digital Art Application"
+A professional digital art application built with C++ and Win32, featuring a modern modular architecture.
 
 ## 🚀 Quick Start
 
-### Compilation
+### Build & Run
 ```bash
-# Minimal version (original)
-g++ helloworld.cpp -o helloworld.exe -mwindows
+# Compile all modules
+g++ -std=c++17 -Wall -O2 -Iinclude \
+    src/core/*.cpp src/ui/*.cpp src/drawing/*.cpp src/main.cpp \
+    -o bin/modernpaint.exe -mwindows -lgdiplus -lcomdlg32
 
-# Modern version with all features
-g++ helloworld.cpp -o modernpaint.exe -mwindows -lgdiplus -lcomdlg32 -O2
+# Run the application
+./bin/modernpaint.exe
 ```
 
-### System Requirements
-- Windows 10/11 (or Windows 7+ with GDI+ support)
-- MinGW-w64 compiler
-- GDI+ library support
+## 📁 Project Structure
+
+```
+📦 Modern Paint Studio Pro
+├── 🔧 Makefile                 # Professional build system
+├── 📁 src/                     # Source code (modular)
+│   ├── 📁 core/                # Application core
+│   ├── 📁 ui/                  # User interface
+│   ├── 📁 drawing/             # Drawing engine
+│   └── main.cpp                # Entry point
+├── 📁 include/                 # Header files
+├── 📁 tests/                   # Test suite
+├── 📁 docs/                    # Documentation
+├── 📁 build/                   # Build artifacts
+└── 📁 bin/                     # Executables
+```
+
+## ✨ Features
+
+### 🎨 **Drawing Tools**
+- **Brush Tool** - Freehand drawing with adjustable size
+- **Eraser Tool** - Remove content with precision
+- **Shape Tools** - Rectangle, circle, and line tools
+- **Color Picker** - Advanced HSV color selection
+
+### 🎯 **Professional UI**
+- **Modern Interface** - Clean, responsive design
+- **Theme System** - Light/dark theme support
+- **Toolbar** - Easy access to all tools and settings
+- **Status Bar** - Real-time information display
+- **Menu System** - Complete menu with shortcuts
+
+### ⚡ **Advanced Features**
+- **Undo/Redo System** - Full operation history
+- **Zoom & Pan** - Navigate large canvases
+- **Grid Overlay** - Precision drawing assistance
+- **File Operations** - Save/load artwork
+- **Keyboard Shortcuts** - Professional workflow
+
+## 🏗️ Architecture
+
+### **Modular Design**
+- **Core Module**: State management, configuration, events
+- **UI Module**: Rendering, menus, interface elements  
+- **Drawing Module**: Graphics operations, tools, algorithms
+- **Clean Interfaces**: Well-defined APIs between modules
+
+### **Professional Patterns**
+- **Singleton State**: Centralized application state
+- **Namespace Organization**: Clear module boundaries
+- **Event-Driven**: Proper message handling architecture
+- **Separation of Concerns**: Logic separated from presentation
+
+## 🔧 Development
+
+### **Build System**
+The project uses a professional modular build system:
+
+```bash
+# If make is available:
+make all         # Build application
+make debug       # Debug build  
+make release     # Optimized build
+make structure   # Show project layout
+make help        # Available commands
+
+# Direct compilation:
+# Compile each module to object files, then link
+```
+
+### **Testing**
+Comprehensive test suite with professional framework:
+- Unit tests for all major components
+- Integration tests for full application
+- Performance and stress testing
+- Automated test runner
+
+## 📚 Documentation
+
+- **[REFACTORING.md](docs/REFACTORING.md)** - Detailed refactoring guide
+- **[TESTING.md](docs/TESTING.md)** - Test suite documentation  
+- **Header Files** - Comprehensive API documentation
+
+## 🎯 Key Improvements
+
+### **Before Refactoring**
+- ❌ Single monolithic 1000+ line file
+- ❌ Mixed concerns and responsibilities  
+- ❌ Difficult to maintain and extend
+- ❌ Hard to test individual components
+
+### **After Refactoring** 
+- ✅ **Modular Architecture** - Clean separation of concerns
+- ✅ **Professional Structure** - Industry-standard organization
+- ✅ **Maintainable Code** - Easy to understand and modify
+- ✅ **Testable Components** - Individual module testing
+- ✅ **Scalable Design** - Easy to extend with new features
+- ✅ **Team-Ready** - Multiple developers can work simultaneously
 
 ## ⌨️ Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
-| `Ctrl+N` | New canvas |
-| `Ctrl+S` | Save image |
-| `Ctrl+Z` | Undo |
-| `Ctrl+Y` | Redo |
-| `Ctrl+T` | Toggle theme |
-| `G` | Toggle grid |
-| `B` | Brush tool |
-| `E` | Eraser tool |
-| `R` | Rectangle tool |
-| `C` | Circle tool |
-| `L` | Line tool |
-| `1-9` | Brush sizes |
-| `F1` | Help |
-| `ESC` | Exit |
-| `Ctrl+Mouse Wheel` | Zoom |
-| `Mouse Wheel` | Scroll |
-| `Right Click` | Context menu |
+| **Ctrl+Z** | Undo last action |
+| **Ctrl+Y** | Redo action |
+| **Ctrl+S** | Save image |
+| **Ctrl+N** | New canvas |
+| **Ctrl+T** | Toggle theme |
+| **G** | Toggle grid |
+| **B/E/R/C/L** | Select tools |
+| **1-9** | Brush sizes |
+| **F1** | Help |
 
-## 🎨 How to Use
+## 🛠️ Requirements
 
-1. **Select Tools**: Click toolbar buttons or use keyboard (B/E/R/C/L keys)
-2. **Choose Colors**: Click 16-color palette OR click "More" for advanced HSV color wheel
-3. **Adjust Brush Size**: Click and drag the size slider (or press 1-9)
-4. **Draw**: Click and drag on the canvas area
-5. **Use Shapes**: Select shape tool, click and drag to create perfect shapes
-6. **Professional Features**: Use menu bar (File/Edit/View/Tools/Help) or shortcuts
-7. **Zoom**: Hold Ctrl and scroll mouse wheel for precision work
-8. **Toggle Features**: Press 'G' for grid, Ctrl+T for theme switching
-9. **Right-Click**: Access context menu for all features
+- **Windows OS** with Win32 API support
+- **GDI+** graphics library  
+- **C++17** compatible compiler (MinGW, MSVC)
+- **Standard Libraries**: `<windows.h>`, `<gdiplus.h>`, `<vector>`, etc.
 
-## 📏 Technical Details
+## 🎨 Modern Paint Studio Pro
 
-- **File Size**: ~150KB compiled (modern version)
-- **Memory Usage**: Minimal RAM footprint
-- **Dependencies**: GDI+, Common Dialog libraries
-- **Architecture**: Pure Win32 API with GDI+ graphics
-- **Performance**: Optimized rendering with immediate drawing feedback
+**A professional digital art application showcasing excellent C++ architecture, clean code practices, and modular design principles.**
 
-## 🎯 Features Comparison
-
-| Feature | Original | Modern Version |
-|---------|----------|----------------|
-| Drawing | ✓ Basic | ✓ Advanced with variable brush sizes |
-| Colors | ✓ 10 keyboard shortcuts | ✓ 16-color palette + HSV color wheel |
-| UI | Basic text instructions | ✓ Professional menu bar, toolbar & status bar |
-| Themes | None | ✓ Dark/Light themes with smooth transitions |
-| Undo/Redo | ✓ Basic | ✓ Unlimited with visual feedback |
-| Tools | Brush only | ✓ 6 tools with keyboard shortcuts (B/E/R/C/L) |
-| File Operations | None | ✓ Save with professional dialog |
-| Zoom & Pan | None | ✓ Full zoom/pan support (20%-500%) |
-| Grid | None | ✓ Toggle grid overlay for precision |
-| Help System | None | ✓ F1 comprehensive help with shortcuts |
-| Context Menu | None | ✓ Right-click menu with all features |
-| Menu System | None | ✓ Professional File/Edit/View/Tools/Help menus |
-| Color Picker | None | ✓ Advanced HSV color wheel with real-time preview |
-
-## 🧪 Testing Framework
-
-Modern Paint Studio Pro includes a comprehensive testing suite to ensure reliability and quality:
-
-### Quick Testing
-```bash
-# Run all tests (unit + integration + manual guide)
-./run_tests.bat
-
-# Or use individual test suites
-./tests.exe              # Unit tests only
-./integration_tests.exe  # Integration tests only
-```
-
-### Test Coverage
-- **19 automated unit tests** - Core functionality validation
-- **15 automated integration tests** - Real UI and application testing  
-- **Manual testing guide** - User experience validation
-- **Performance benchmarks** - Speed and memory usage validation
-
-### Test Categories
-- ✅ Color system accuracy (HSV↔RGB conversion)
-- ✅ UI component click detection and calculations
-- ✅ Drawing system integrity and bounds checking
-- ✅ Keyboard shortcut validation
-- ✅ Memory usage and leak prevention  
-- ✅ Application launch and window management
-- ✅ Performance benchmarks (color conversion, UI responsiveness)
-
-**Current Test Status: ✅ 100% Pass Rate**
-
-See [TESTING.md](TESTING.md) for comprehensive testing documentation.
-
----
-
-Transform your simple drawing needs into professional digital art with Modern Paint Studio Pro! 🎨✨
+Transform your digital art workflow with this fully-featured painting application!

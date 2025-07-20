@@ -9,11 +9,17 @@ WINFLAGS = -mwindows
 # Source files
 MAIN_SRC = helloworld.cpp
 TEST_SRC = tests.cpp test_stubs.cpp
+COMPREHENSIVE_TEST_SRC = comprehensive_tests.cpp test_stubs.cpp
+MESSAGE_TEST_SRC = message_handler_tests.cpp
+DRAWING_TEST_SRC = drawing_function_tests.cpp test_stubs.cpp
 TEST_FRAMEWORK = test_framework.h
 
 # Output executables
 MAIN_EXE = modernpaint.exe
 TEST_EXE = tests.exe
+COMPREHENSIVE_EXE = comprehensive_tests.exe
+MESSAGE_EXE = message_handler_tests.exe
+DRAWING_EXE = drawing_function_tests.exe
 INTEGRATION_EXE = integration_tests.exe
 
 # Default target - build main application
@@ -32,6 +38,30 @@ $(TEST_EXE): $(TEST_SRC) $(TEST_FRAMEWORK)
 	@echo "Building test suite..."
 	$(CXX) $(CXXFLAGS) $(TEST_SRC) -o $(TEST_EXE) $(LIBS)
 	@echo "✓ Test build complete: $(TEST_EXE)"
+
+# Build comprehensive tests
+comprehensive-tests: $(COMPREHENSIVE_EXE)
+
+$(COMPREHENSIVE_EXE): $(COMPREHENSIVE_TEST_SRC) $(TEST_FRAMEWORK)
+	@echo "Building comprehensive test suite..."
+	$(CXX) $(CXXFLAGS) $(COMPREHENSIVE_TEST_SRC) -o $(COMPREHENSIVE_EXE) $(LIBS)
+	@echo "✓ Comprehensive test build complete: $(COMPREHENSIVE_EXE)"
+
+# Build message handler tests
+message-tests: $(MESSAGE_EXE)
+
+$(MESSAGE_EXE): $(MESSAGE_TEST_SRC) $(TEST_FRAMEWORK)
+	@echo "Building message handler test suite..."
+	$(CXX) $(CXXFLAGS) $(MESSAGE_TEST_SRC) -o $(MESSAGE_EXE) $(LIBS)
+	@echo "✓ Message handler test build complete: $(MESSAGE_EXE)"
+
+# Build drawing function tests
+drawing-tests: $(DRAWING_EXE)
+
+$(DRAWING_EXE): $(DRAWING_TEST_SRC) $(TEST_FRAMEWORK)
+	@echo "Building drawing function test suite..."
+	$(CXX) $(CXXFLAGS) $(DRAWING_TEST_SRC) -o $(DRAWING_EXE) $(LIBS)
+	@echo "✓ Drawing function test build complete: $(DRAWING_EXE)"
 
 # Build integration tests
 integration-tests: $(INTEGRATION_EXE)
@@ -53,9 +83,27 @@ test-integration: $(INTEGRATION_EXE)
 	@echo "======================================"
 	./$(INTEGRATION_EXE)
 
+# Run comprehensive function tests
+test-comprehensive: $(COMPREHENSIVE_EXE)
+	@echo "Running comprehensive function tests..."
+	@echo "======================================"
+	./$(COMPREHENSIVE_EXE)
+
+# Run message handler tests
+test-messages: $(MESSAGE_EXE)
+	@echo "Running message handler tests..."
+	@echo "======================================"
+	./$(MESSAGE_EXE)
+
+# Run drawing function tests
+test-drawing: $(DRAWING_EXE)
+	@echo "Running drawing function tests..."
+	@echo "======================================"
+	./$(DRAWING_EXE)
+
 # Run all tests (comprehensive)
-test-all: $(TEST_EXE) $(INTEGRATION_EXE)
-	@echo "Running comprehensive test suite..."
+test-all: $(TEST_EXE) $(COMPREHENSIVE_EXE) $(MESSAGE_EXE) $(DRAWING_EXE) $(INTEGRATION_EXE)
+	@echo "Running ALL test suites..."
 	@echo "======================================"
 	./run_tests.bat
 
@@ -65,7 +113,7 @@ run: $(MAIN_EXE)
 	./$(MAIN_EXE)
 
 # Build everything
-build-all: $(MAIN_EXE) $(TEST_EXE) $(INTEGRATION_EXE)
+build-all: $(MAIN_EXE) $(TEST_EXE) $(COMPREHENSIVE_EXE) $(MESSAGE_EXE) $(DRAWING_EXE) $(INTEGRATION_EXE)
 	@echo "✓ All builds complete!"
 
 # Test and run sequence

@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <cmath>
+#include <vector>
 
 // Extract the HSVtoRGB function for testing
 COLORREF HSVtoRGB(float h, float s, float v) 
@@ -45,8 +46,7 @@ struct DrawPoint {
 };
 
 struct UndoState {
-    // In a real implementation this would contain drawing points
-    int pointCount;
+    std::vector<DrawPoint> points;
 };
 
 enum ToolType {

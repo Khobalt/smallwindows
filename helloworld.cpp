@@ -2,6 +2,7 @@
 #include <vector>
 #include <cstdio>
 #include <string>
+#include <cmath>
 #include <commdlg.h>
 #include <gdiplus.h>
 
@@ -15,6 +16,8 @@ void DrawToolbar(HDC hdc, RECT clientRect);
 void DrawStatusBar(HDC hdc, RECT clientRect);
 COLORREF HSVtoRGB(float h, float s, float v);
 void DrawColorPicker(HDC hdc, RECT rect);
+void DrawAdvancedColorPicker(HDC hdc);
+HMENU CreateMenuBar();
 
 char const *szClassName = "ModernPaintApp";
 
@@ -59,11 +62,35 @@ ThemeType currentTheme = THEME_LIGHT;
 float zoomLevel = 1.0f;
 int panX = 0, panY = 0;
 bool showGrid = false;
+bool showAdvancedColorPicker = false;
+int pickerX = 400, pickerY = 200;
 
 // UI Layout constants
 const int TOOLBAR_HEIGHT = 60;
 const int STATUSBAR_HEIGHT = 25;
+const int MENUBAR_HEIGHT = 25;
 const int COLOR_PICKER_WIDTH = 200;
+
+// Menu IDs
+#define IDM_FILE_NEW        1001
+#define IDM_FILE_OPEN       1002
+#define IDM_FILE_SAVE       1003
+#define IDM_FILE_SAVEAS     1004
+#define IDM_FILE_EXIT       1005
+#define IDM_EDIT_UNDO       1006
+#define IDM_EDIT_REDO       1007
+#define IDM_EDIT_CLEAR      1008
+#define IDM_VIEW_ZOOM_IN    1009
+#define IDM_VIEW_ZOOM_OUT   1010
+#define IDM_VIEW_ZOOM_FIT   1011
+#define IDM_VIEW_GRID       1012
+#define IDM_VIEW_THEME      1013
+#define IDM_TOOLS_BRUSH     1014
+#define IDM_TOOLS_ERASER    1015
+#define IDM_TOOLS_RECT      1016
+#define IDM_TOOLS_CIRCLE    1017
+#define IDM_TOOLS_LINE      1018
+#define IDM_HELP_ABOUT      1019
 
 // Color palette
 COLORREF colorPalette[] = {
@@ -109,6 +136,9 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszA
         return 0;
     }
 
+    // Create the menu
+    HMENU hMenu = CreateMenuBar();
+
     // Create the window.
     hwnd = CreateWindowEx(
         WS_EX_ACCEPTFILES,
@@ -120,7 +150,7 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszA
         1200,
         800,
         NULL,
-        NULL,
+        hMenu,
         hThisInstance,
         NULL
     );
@@ -169,12 +199,18 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
                 }
                 
                 // Color palette clicks (starting at x=350)
-                if (x >= 350 && x < 550) {
+                if (x >= 350 && x < 542) {
                     int colorIndex = (x - 350) / 12; // 12px per color
                     if (colorIndex < 16) {
                         currentColor = colorPalette[colorIndex];
                         InvalidateRect(hwnd, NULL, FALSE);
                     }
+                }
+                
+                // Advanced color picker button (x=545-590)
+                if (x >= 545 && x <= 590) {
+                    showAdvancedColorPicker = !showAdvancedColorPicker;
+                    InvalidateRect(hwnd, NULL, FALSE);
                 }
                 
                 // Brush size slider (x=600-700)
@@ -189,6 +225,29 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
                     InvalidateRect(hwnd, NULL, TRUE);
                 }
                 
+                return 0;
+            }
+            
+            // Handle advanced color picker clicks
+            if (showAdvancedColorPicker) {
+                if (x >= pickerX && x <= pickerX + 200 && y >= pickerY && y <= pickerY + 200) {
+                    // Calculate HSV from click position
+                    int relX = x - pickerX - 100;
+                    int relY = y - pickerY - 100;
+                    float distance = sqrt(relX * relX + relY * relY);
+                    
+                    if (distance <= 80) { // Inside color wheel
+                        float angle = atan2(relY, relX) * 180 / 3.14159f;
+                        if (angle < 0) angle += 360;
+                        float saturation = distance / 80.0f;
+                        currentColor = HSVtoRGB(angle, saturation, 0.9f);
+                        InvalidateRect(hwnd, NULL, FALSE);
+                    }
+                    return 0;
+                }
+                // Click outside closes picker
+                showAdvancedColorPicker = false;
+                InvalidateRect(hwnd, NULL, FALSE);
                 return 0;
             }
             
@@ -390,6 +449,41 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
                     }
                     break;
                     
+                case 'B': // Brush Tool
+                    if (!ctrlPressed) {
+                        currentTool = TOOL_BRUSH;
+                        InvalidateRect(hwnd, NULL, FALSE);
+                    }
+                    break;
+                    
+                case 'E': // Eraser Tool
+                    if (!ctrlPressed) {
+                        currentTool = TOOL_ERASER;
+                        InvalidateRect(hwnd, NULL, FALSE);
+                    }
+                    break;
+                    
+                case 'R': // Rectangle Tool
+                    if (!ctrlPressed) {
+                        currentTool = TOOL_RECTANGLE;
+                        InvalidateRect(hwnd, NULL, FALSE);
+                    }
+                    break;
+                    
+                case 'C': // Circle Tool
+                    if (!ctrlPressed) {
+                        currentTool = TOOL_CIRCLE;
+                        InvalidateRect(hwnd, NULL, FALSE);
+                    }
+                    break;
+                    
+                case 'L': // Line Tool
+                    if (!ctrlPressed) {
+                        currentTool = TOOL_LINE;
+                        InvalidateRect(hwnd, NULL, FALSE);
+                    }
+                    break;
+                    
                 case VK_F1: // Help
                     MessageBox(hwnd, 
                         "Modern Paint Studio Pro v2.0\n\n"
@@ -504,6 +598,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
                 DeleteObject(gridPen);
             }
 
+            // Draw advanced color picker if visible
+            if (showAdvancedColorPicker) {
+                DrawAdvancedColorPicker(hdc);
+            }
+
             // Draw status bar
             DrawStatusBar(hdc, clientRect);
 
@@ -515,16 +614,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
         {
             // Create context menu
             HMENU hMenu = CreatePopupMenu();
-            AppendMenu(hMenu, MF_STRING, 1001, "New Canvas\tCtrl+N");
-            AppendMenu(hMenu, MF_STRING, 1002, "Save Image\tCtrl+S");
+            AppendMenu(hMenu, MF_STRING, IDM_FILE_NEW, "New Canvas\tCtrl+N");
+            AppendMenu(hMenu, MF_STRING, IDM_FILE_SAVE, "Save Image\tCtrl+S");
             AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
-            AppendMenu(hMenu, MF_STRING, 1003, "Undo\tCtrl+Z");
-            AppendMenu(hMenu, MF_STRING, 1004, "Redo\tCtrl+Y");
+            AppendMenu(hMenu, MF_STRING, IDM_EDIT_UNDO, "Undo\tCtrl+Z");
+            AppendMenu(hMenu, MF_STRING, IDM_EDIT_REDO, "Redo\tCtrl+Y");
             AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
-            AppendMenu(hMenu, MF_STRING, 1005, showGrid ? "Hide Grid\tG" : "Show Grid\tG");
-            AppendMenu(hMenu, MF_STRING, 1006, currentTheme == THEME_LIGHT ? "Dark Theme\tCtrl+T" : "Light Theme\tCtrl+T");
+            AppendMenu(hMenu, MF_STRING, IDM_VIEW_GRID, showGrid ? "Hide Grid\tG" : "Show Grid\tG");
+            AppendMenu(hMenu, MF_STRING, IDM_VIEW_THEME, currentTheme == THEME_LIGHT ? "Dark Theme\tCtrl+T" : "Light Theme\tCtrl+T");
             AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
-            AppendMenu(hMenu, MF_STRING, 1007, "About\tF1");
+            AppendMenu(hMenu, MF_STRING, IDM_HELP_ABOUT, "About\tF1");
 
             POINT pt;
             GetCursorPos(&pt);
@@ -536,28 +635,77 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
         case WM_COMMAND:
         {
             switch (LOWORD(wParam)) {
-                case 1001: // New Canvas
-                    PostMessage(hwnd, WM_KEYDOWN, 'N', 0x001F0001 | (0x1D << 16)); // Simulate Ctrl+N
+                // File Menu
+                case IDM_FILE_NEW:
+                    PostMessage(hwnd, WM_KEYDOWN, 'N', 0x001F0001 | (0x1D << 16));
                     break;
-                case 1002: // Save
-                    PostMessage(hwnd, WM_KEYDOWN, 'S', 0x001F0001 | (0x1D << 16)); // Simulate Ctrl+S
+                case IDM_FILE_SAVE:
+                    PostMessage(hwnd, WM_KEYDOWN, 'S', 0x001F0001 | (0x1D << 16));
                     break;
-                case 1003: // Undo
-                    PostMessage(hwnd, WM_KEYDOWN, 'Z', 0x002C0001 | (0x1D << 16)); // Simulate Ctrl+Z
+                case IDM_FILE_EXIT:
+                    PostQuitMessage(0);
                     break;
-                case 1004: // Redo
-                    PostMessage(hwnd, WM_KEYDOWN, 'Y', 0x00150001 | (0x1D << 16)); // Simulate Ctrl+Y
+                
+                // Edit Menu
+                case IDM_EDIT_UNDO:
+                    PostMessage(hwnd, WM_KEYDOWN, 'Z', 0x002C0001 | (0x1D << 16));
                     break;
-                case 1005: // Toggle Grid
+                case IDM_EDIT_REDO:
+                    PostMessage(hwnd, WM_KEYDOWN, 'Y', 0x00150001 | (0x1D << 16));
+                    break;
+                case IDM_EDIT_CLEAR:
+                    PostMessage(hwnd, WM_KEYDOWN, 'N', 0x001F0001 | (0x1D << 16));
+                    break;
+                
+                // View Menu
+                case IDM_VIEW_ZOOM_IN:
+                    zoomLevel = (zoomLevel * 1.2f > 5.0f) ? 5.0f : zoomLevel * 1.2f;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                case IDM_VIEW_ZOOM_OUT:
+                    zoomLevel = (zoomLevel / 1.2f < 0.2f) ? 0.2f : zoomLevel / 1.2f;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                case IDM_VIEW_ZOOM_FIT:
+                    zoomLevel = 1.0f;
+                    panX = panY = 0;
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    break;
+                case IDM_VIEW_GRID:
                     showGrid = !showGrid;
                     InvalidateRect(hwnd, NULL, TRUE);
                     break;
-                case 1006: // Toggle Theme
-                    PostMessage(hwnd, WM_KEYDOWN, 'T', 0x00140001 | (0x1D << 16)); // Simulate Ctrl+T
+                case IDM_VIEW_THEME:
+                    PostMessage(hwnd, WM_KEYDOWN, 'T', 0x00140001 | (0x1D << 16));
                     break;
-                case 1007: // About
+                
+                // Tools Menu
+                case IDM_TOOLS_BRUSH:
+                    currentTool = TOOL_BRUSH;
+                    InvalidateRect(hwnd, NULL, FALSE);
+                    break;
+                case IDM_TOOLS_ERASER:
+                    currentTool = TOOL_ERASER;
+                    InvalidateRect(hwnd, NULL, FALSE);
+                    break;
+                case IDM_TOOLS_RECT:
+                    currentTool = TOOL_RECTANGLE;
+                    InvalidateRect(hwnd, NULL, FALSE);
+                    break;
+                case IDM_TOOLS_CIRCLE:
+                    currentTool = TOOL_CIRCLE;
+                    InvalidateRect(hwnd, NULL, FALSE);
+                    break;
+                case IDM_TOOLS_LINE:
+                    currentTool = TOOL_LINE;
+                    InvalidateRect(hwnd, NULL, FALSE);
+                    break;
+                
+                // Help Menu
+                case IDM_HELP_ABOUT:
                     PostMessage(hwnd, WM_KEYDOWN, VK_F1, 0x003B0001);
                     break;
+                
             }
         }
         break;
@@ -656,6 +804,23 @@ void DrawToolbar(HDC hdc, RECT clientRect)
         }
     }
     
+    // Advanced color picker button
+    RECT pickerButtonRect = {545, 5, 590, 35};
+    COLORREF pickerBtnColor = showAdvancedColorPicker ? activeBg : buttonBg;
+    HBRUSH pickerBtnBrush = CreateSolidBrush(pickerBtnColor);
+    FillRect(hdc, &pickerButtonRect, pickerBtnBrush);
+    DeleteObject(pickerBtnBrush);
+    
+    HPEN borderPen2 = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
+    HPEN oldPen2 = (HPEN)SelectObject(hdc, borderPen2);
+    Rectangle(hdc, pickerButtonRect.left, pickerButtonRect.top, pickerButtonRect.right, pickerButtonRect.bottom);
+    SelectObject(hdc, oldPen2);
+    DeleteObject(borderPen2);
+    
+    RECT pickerTextRect = pickerButtonRect;
+    pickerTextRect.top += 8;
+    DrawText(hdc, "More", -1, &pickerTextRect, DT_CENTER);
+    
     // Brush size slider
     TextOut(hdc, 560, 10, "Size:", 5);
     RECT sliderRect = {600, 15, 700, 25};
@@ -739,4 +904,110 @@ COLORREF HSVtoRGB(float h, float s, float v)
     }
     
     return RGB((int)((r + m) * 255), (int)((g + m) * 255), (int)((b + m) * 255));
+}
+
+HMENU CreateMenuBar()
+{
+    HMENU hMenuBar = CreateMenu();
+    HMENU hFileMenu = CreatePopupMenu();
+    HMENU hEditMenu = CreatePopupMenu();
+    HMENU hViewMenu = CreatePopupMenu();
+    HMENU hToolsMenu = CreatePopupMenu();
+    HMENU hHelpMenu = CreatePopupMenu();
+
+    // File Menu
+    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_NEW, "&New\tCtrl+N");
+    AppendMenu(hFileMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_SAVE, "&Save\tCtrl+S");
+    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_SAVEAS, "Save &As...");
+    AppendMenu(hFileMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_EXIT, "E&xit\tAlt+F4");
+
+    // Edit Menu
+    AppendMenu(hEditMenu, MF_STRING, IDM_EDIT_UNDO, "&Undo\tCtrl+Z");
+    AppendMenu(hEditMenu, MF_STRING, IDM_EDIT_REDO, "&Redo\tCtrl+Y");
+    AppendMenu(hEditMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hEditMenu, MF_STRING, IDM_EDIT_CLEAR, "&Clear Canvas\tCtrl+N");
+
+    // View Menu
+    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_ZOOM_IN, "Zoom &In\tCtrl++");
+    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_ZOOM_OUT, "Zoom &Out\tCtrl+-");
+    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_ZOOM_FIT, "&Fit to Window\tCtrl+0");
+    AppendMenu(hViewMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_GRID, "Show &Grid\tG");
+    AppendMenu(hViewMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_THEME, "Toggle &Theme\tCtrl+T");
+
+    // Tools Menu
+    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_BRUSH, "&Brush Tool\tB");
+    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_ERASER, "&Eraser Tool\tE");
+    AppendMenu(hToolsMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_RECT, "&Rectangle Tool\tR");
+    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_CIRCLE, "&Circle Tool\tC");
+    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_LINE, "&Line Tool\tL");
+
+    // Help Menu
+    AppendMenu(hHelpMenu, MF_STRING, IDM_HELP_ABOUT, "&About\tF1");
+
+    // Append submenus to main menu
+    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hFileMenu, "&File");
+    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hEditMenu, "&Edit");
+    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hViewMenu, "&View");
+    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hToolsMenu, "&Tools");
+    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hHelpMenu, "&Help");
+
+    return hMenuBar;
+}
+
+void DrawAdvancedColorPicker(HDC hdc)
+{
+    // Background
+    RECT pickerBg = {pickerX, pickerY, pickerX + 200, pickerY + 200};
+    HBRUSH bgBrush = CreateSolidBrush(RGB(240, 240, 240));
+    FillRect(hdc, &pickerBg, bgBrush);
+    DeleteObject(bgBrush);
+    
+    // Border
+    HPEN borderPen = CreatePen(PS_SOLID, 2, RGB(100, 100, 100));
+    HPEN oldPen = (HPEN)SelectObject(hdc, borderPen);
+    Rectangle(hdc, pickerX, pickerY, pickerX + 200, pickerY + 200);
+    SelectObject(hdc, oldPen);
+    DeleteObject(borderPen);
+    
+    // Title
+    RECT titleRect = {pickerX + 10, pickerY + 5, pickerX + 190, pickerY + 25};
+    SetBkMode(hdc, TRANSPARENT);
+    DrawText(hdc, "Advanced Color Picker", -1, &titleRect, DT_CENTER);
+    
+    // Draw HSV color wheel
+    int centerX = pickerX + 100;
+    int centerY = pickerY + 100;
+    int radius = 80;
+    
+    for (int y = -radius; y <= radius; y++) {
+        for (int x = -radius; x <= radius; x++) {
+            float distance = sqrt(x * x + y * y);
+            if (distance <= radius) {
+                float angle = atan2(y, x) * 180.0f / 3.14159f;
+                if (angle < 0) angle += 360;
+                float saturation = distance / radius;
+                
+                COLORREF color = HSVtoRGB(angle, saturation, 0.9f);
+                SetPixel(hdc, centerX + x, centerY + y, color);
+            }
+        }
+    }
+    
+    // Current color indicator
+    RECT currentColorRect = {pickerX + 20, pickerY + 160, pickerX + 180, pickerY + 180};
+    HBRUSH currentBrush = CreateSolidBrush(currentColor);
+    FillRect(hdc, &currentColorRect, currentBrush);
+    DeleteObject(currentBrush);
+    
+    // Current color border
+    HPEN colorBorderPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
+    HPEN oldColorPen = (HPEN)SelectObject(hdc, colorBorderPen);
+    Rectangle(hdc, currentColorRect.left, currentColorRect.top, currentColorRect.right, currentColorRect.bottom);
+    SelectObject(hdc, oldColorPen);
+    DeleteObject(colorBorderPen);
 }

@@ -5,15 +5,18 @@ A modern, feature-rich digital painting application built with pure Win32 API an
 ## ✨ Modern Features
 
 ### 🎨 Advanced Drawing Tools
-- **Brush Tool** - Variable size drawing with smooth strokes
-- **Eraser Tool** - Clean erasing with adjustable sizes
-- **Shape Tools** - Rectangle, Circle, and Line drawing
-- **Color Picker** - 16-color palette with one-click selection
+- **Brush Tool** - Variable size drawing with smooth strokes (B key)
+- **Eraser Tool** - Clean erasing with adjustable sizes (E key)
+- **Shape Tools** - Rectangle (R), Circle (C), and Line (L) drawing
+- **16-Color Palette** - Instant color selection with visual feedback
+- **HSV Color Wheel** - Advanced color picker with full spectrum selection
 
 ### 🖼️ Professional UI
-- **Modern Dark/Light Themes** - Toggle between elegant themes
+- **Modern Dark/Light Themes** - Toggle between elegant themes (Ctrl+T)
+- **Professional Menu Bar** - File, Edit, View, Tools, Help menus with shortcuts
 - **Interactive Toolbar** - Click-to-select tools and colors
 - **Dynamic Brush Size Slider** - Real-time size adjustment (1-20px)
+- **Advanced Color Picker** - Click "More" for HSV color wheel selection
 - **Comprehensive Status Bar** - Shows tool, size, zoom, grid, theme, and point count
 - **Right-Click Context Menu** - Quick access to all features
 
@@ -57,6 +60,11 @@ g++ helloworld.cpp -o modernpaint.exe -mwindows -lgdiplus -lcomdlg32 -O2
 | `Ctrl+Y` | Redo |
 | `Ctrl+T` | Toggle theme |
 | `G` | Toggle grid |
+| `B` | Brush tool |
+| `E` | Eraser tool |
+| `R` | Rectangle tool |
+| `C` | Circle tool |
+| `L` | Line tool |
 | `1-9` | Brush sizes |
 | `F1` | Help |
 | `ESC` | Exit |
@@ -66,14 +74,15 @@ g++ helloworld.cpp -o modernpaint.exe -mwindows -lgdiplus -lcomdlg32 -O2
 
 ## 🎨 How to Use
 
-1. **Select Tools**: Click toolbar buttons (Brush, Eraser, Rectangle, Circle, Line, Picker)
-2. **Choose Colors**: Click any color in the 16-color palette
+1. **Select Tools**: Click toolbar buttons or use keyboard (B/E/R/C/L keys)
+2. **Choose Colors**: Click 16-color palette OR click "More" for advanced HSV color wheel
 3. **Adjust Brush Size**: Click and drag the size slider (or press 1-9)
-4. **Draw**: Click and drag on the white canvas area
-5. **Use Shapes**: Select shape tool, click and drag to create
-6. **Zoom**: Hold Ctrl and scroll mouse wheel
-7. **Toggle Features**: Press 'G' for grid, Ctrl+T for theme
-8. **Right-Click**: Access context menu for all features
+4. **Draw**: Click and drag on the canvas area
+5. **Use Shapes**: Select shape tool, click and drag to create perfect shapes
+6. **Professional Features**: Use menu bar (File/Edit/View/Tools/Help) or shortcuts
+7. **Zoom**: Hold Ctrl and scroll mouse wheel for precision work
+8. **Toggle Features**: Press 'G' for grid, Ctrl+T for theme switching
+9. **Right-Click**: Access context menu for all features
 
 ## 📏 Technical Details
 
@@ -88,15 +97,17 @@ g++ helloworld.cpp -o modernpaint.exe -mwindows -lgdiplus -lcomdlg32 -O2
 | Feature | Original | Modern Version |
 |---------|----------|----------------|
 | Drawing | ✓ Basic | ✓ Advanced with variable brush sizes |
-| Colors | ✓ 10 keyboard shortcuts | ✓ 16-color visual palette |
-| UI | Basic text instructions | ✓ Professional toolbar & status bar |
-| Themes | None | ✓ Dark/Light themes |
+| Colors | ✓ 10 keyboard shortcuts | ✓ 16-color palette + HSV color wheel |
+| UI | Basic text instructions | ✓ Professional menu bar, toolbar & status bar |
+| Themes | None | ✓ Dark/Light themes with smooth transitions |
 | Undo/Redo | ✓ Basic | ✓ Unlimited with visual feedback |
-| Tools | Brush only | ✓ 6 tools (Brush, Eraser, Shapes) |
-| File Operations | None | ✓ Save with dialog |
-| Zoom & Pan | None | ✓ Full zoom/pan support |
-| Grid | None | ✓ Toggle grid overlay |
-| Help System | None | ✓ F1 comprehensive help |
-| Context Menu | None | ✓ Right-click menu |
+| Tools | Brush only | ✓ 6 tools with keyboard shortcuts (B/E/R/C/L) |
+| File Operations | None | ✓ Save with professional dialog |
+| Zoom & Pan | None | ✓ Full zoom/pan support (20%-500%) |
+| Grid | None | ✓ Toggle grid overlay for precision |
+| Help System | None | ✓ F1 comprehensive help with shortcuts |
+| Context Menu | None | ✓ Right-click menu with all features |
+| Menu System | None | ✓ Professional File/Edit/View/Tools/Help menus |
+| Color Picker | None | ✓ Advanced HSV color wheel with real-time preview |
 
 Transform your simple drawing needs into professional digital art with Modern Paint Studio Pro! 🎨✨

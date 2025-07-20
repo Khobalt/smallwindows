@@ -1,3 +1,10 @@
+#ifndef UNICODE
+#define UNICODE
+#endif
+#ifndef _UNICODE
+#define _UNICODE
+#endif
+
 #include <windows.h>
 #include <vector>
 #include <cstdio>
@@ -19,7 +26,7 @@ void DrawColorPicker(HDC hdc, RECT rect);
 void DrawAdvancedColorPicker(HDC hdc);
 HMENU CreateMenuBar();
 
-char const *szClassName = "ModernPaintApp";
+const WCHAR szClassName[] = L"ModernPaintApp";
 
 // Structure to store drawing points
 struct DrawPoint {
@@ -143,7 +150,7 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszA
     hwnd = CreateWindowEx(
         WS_EX_ACCEPTFILES,
         szClassName,
-        "Modern Paint Studio Pro - Advanced Digital Art Application",
+        L"Modern Paint Studio Pro - Advanced Digital Art Application",
         WS_OVERLAPPEDWINDOW,
         100,
         100,
@@ -390,14 +397,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
                 case 'S': // Save
                     if (ctrlPressed) {
                         OPENFILENAME ofn;
-                        char szFile[260] = {0};
+                        WCHAR szFile[260] = {0};
                         
                         ZeroMemory(&ofn, sizeof(ofn));
                         ofn.lStructSize = sizeof(ofn);
                         ofn.hwndOwner = hwnd;
                         ofn.lpstrFile = szFile;
                         ofn.nMaxFile = sizeof(szFile);
-                        ofn.lpstrFilter = "Bitmap Files (*.bmp)\0*.BMP\0All Files (*.*)\0*.*\0";
+                        ofn.lpstrFilter = L"Bitmap Files (*.bmp)\0*.BMP\0All Files (*.*)\0*.*\0";
                         ofn.nFilterIndex = 1;
                         ofn.lpstrFileTitle = NULL;
                         ofn.nMaxFileTitle = 0;
@@ -415,7 +422,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
                             BitBlt(hdcMem, 0, 0, rect.right, rect.bottom, hdcWindow, 0, 0, SRCCOPY);
                             
                             // Simple bitmap save would require more complex implementation
-                            MessageBox(hwnd, "Save feature implemented! (Simplified version)", "Save", MB_OK);
+                            MessageBox(hwnd, L"Save feature implemented! (Simplified version)", L"Save", MB_OK);
                             
                             DeleteDC(hdcMem);
                             ReleaseDC(hwnd, hdcWindow);
@@ -486,24 +493,24 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
                     
                 case VK_F1: // Help
                     MessageBox(hwnd, 
-                        "Modern Paint Studio Pro v2.0\n\n"
-                        "🎨 TOOLS:\n"
-                        "• Click toolbar buttons for tools\n"
-                        "• Click color palette for colors\n"
-                        "• Drag brush size slider\n\n"
-                        "⌨️ SHORTCUTS:\n"
-                        "• Ctrl+Z: Undo\n"
-                        "• Ctrl+Y: Redo\n"
-                        "• Ctrl+S: Save image\n"
-                        "• Ctrl+N: New canvas\n"
-                        "• Ctrl+T: Toggle theme\n"
-                        "• G: Toggle grid\n"
-                        "• 1-9: Brush sizes\n"
-                        "• Right-click: Context menu\n"
-                        "• Ctrl+Mouse wheel: Zoom\n"
-                        "• Mouse wheel: Scroll\n"
-                        "• ESC: Exit",
-                        "Help", MB_OK | MB_ICONINFORMATION);
+                        L"Modern Paint Studio Pro v2.0\n\n"
+                        L"🎨 TOOLS:\n"
+                        L"• Click toolbar buttons for tools\n"
+                        L"• Click color palette for colors\n"
+                        L"• Drag brush size slider\n\n"
+                        L"⌨️ SHORTCUTS:\n"
+                        L"• Ctrl+Z: Undo\n"
+                        L"• Ctrl+Y: Redo\n"
+                        L"• Ctrl+S: Save image\n"
+                        L"• Ctrl+N: New canvas\n"
+                        L"• Ctrl+T: Toggle theme\n"
+                        L"• G: Toggle grid\n"
+                        L"• 1-9: Brush sizes\n"
+                        L"• Right-click: Context menu\n"
+                        L"• Ctrl+Mouse wheel: Zoom\n"
+                        L"• Mouse wheel: Scroll\n"
+                        L"• ESC: Exit",
+                        L"Help", MB_OK | MB_ICONINFORMATION);
                     break;
                     
                 case VK_ESCAPE:
@@ -614,16 +621,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
         {
             // Create context menu
             HMENU hMenu = CreatePopupMenu();
-            AppendMenu(hMenu, MF_STRING, IDM_FILE_NEW, "New Canvas\tCtrl+N");
-            AppendMenu(hMenu, MF_STRING, IDM_FILE_SAVE, "Save Image\tCtrl+S");
+            AppendMenu(hMenu, MF_STRING, IDM_FILE_NEW, L"New Canvas\tCtrl+N");
+            AppendMenu(hMenu, MF_STRING, IDM_FILE_SAVE, L"Save Image\tCtrl+S");
             AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
-            AppendMenu(hMenu, MF_STRING, IDM_EDIT_UNDO, "Undo\tCtrl+Z");
-            AppendMenu(hMenu, MF_STRING, IDM_EDIT_REDO, "Redo\tCtrl+Y");
+            AppendMenu(hMenu, MF_STRING, IDM_EDIT_UNDO, L"Undo\tCtrl+Z");
+            AppendMenu(hMenu, MF_STRING, IDM_EDIT_REDO, L"Redo\tCtrl+Y");
             AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
-            AppendMenu(hMenu, MF_STRING, IDM_VIEW_GRID, showGrid ? "Hide Grid\tG" : "Show Grid\tG");
-            AppendMenu(hMenu, MF_STRING, IDM_VIEW_THEME, currentTheme == THEME_LIGHT ? "Dark Theme\tCtrl+T" : "Light Theme\tCtrl+T");
+            AppendMenu(hMenu, MF_STRING, IDM_VIEW_GRID, showGrid ? L"Hide Grid\tG" : L"Show Grid\tG");
+            AppendMenu(hMenu, MF_STRING, IDM_VIEW_THEME, currentTheme == THEME_LIGHT ? L"Dark Theme\tCtrl+T" : L"Light Theme\tCtrl+T");
             AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
-            AppendMenu(hMenu, MF_STRING, IDM_HELP_ABOUT, "About\tF1");
+            AppendMenu(hMenu, MF_STRING, IDM_HELP_ABOUT, L"About\tF1");
 
             POINT pt;
             GetCursorPos(&pt);
@@ -765,7 +772,7 @@ void DrawToolbar(HDC hdc, RECT clientRect)
     SetTextColor(hdc, toolbarText);
     
     // Tool buttons
-    const char* toolNames[] = {"Brush", "Eraser", "Rect", "Circle", "Line", "Picker"};
+    const WCHAR* toolNames[] = {L"Brush", L"Eraser", L"Rect", L"Circle", L"Line", L"Picker"};
     for (int i = 0; i < 6; i++) {
         RECT buttonRect = {i * 50 + 5, 5, i * 50 + 45, 35};
         COLORREF btnColor = (currentTool == i) ? activeBg : buttonBg;
@@ -787,7 +794,7 @@ void DrawToolbar(HDC hdc, RECT clientRect)
     }
     
     // Color palette
-    TextOut(hdc, 310, 10, "Colors:", 7);
+    TextOut(hdc, 310, 10, L"Colors:", 7);
     for (int i = 0; i < 16; i++) {
         RECT colorRect = {350 + i * 12, 10, 350 + i * 12 + 10, 20};
         HBRUSH colorBrush = CreateSolidBrush(colorPalette[i]);
@@ -819,10 +826,10 @@ void DrawToolbar(HDC hdc, RECT clientRect)
     
     RECT pickerTextRect = pickerButtonRect;
     pickerTextRect.top += 8;
-    DrawText(hdc, "More", -1, &pickerTextRect, DT_CENTER);
+    DrawText(hdc, L"More", -1, &pickerTextRect, DT_CENTER);
     
     // Brush size slider
-    TextOut(hdc, 560, 10, "Size:", 5);
+    TextOut(hdc, 560, 10, L"Size:", 5);
     RECT sliderRect = {600, 15, 700, 25};
     HBRUSH sliderBrush = CreateSolidBrush(buttonBg);
     FillRect(hdc, &sliderRect, sliderBrush);
@@ -847,7 +854,7 @@ void DrawToolbar(HDC hdc, RECT clientRect)
     SelectObject(hdc, oldPen);
     DeleteObject(borderPen);
     
-    const char* themeText = (currentTheme == THEME_LIGHT) ? "Dark" : "Light";
+    const WCHAR* themeText = (currentTheme == THEME_LIGHT) ? L"Dark" : L"Light";
     RECT themeTextRect = themeRect;
     themeTextRect.top += 8;
     DrawText(hdc, themeText, -1, &themeTextRect, DT_CENTER);
@@ -866,20 +873,20 @@ void DrawStatusBar(HDC hdc, RECT clientRect)
     SetBkMode(hdc, TRANSPARENT);
     SetTextColor(hdc, statusText);
     
-    char statusText1[200];
-    const char* toolName = (currentTool == TOOL_BRUSH) ? "Brush" :
-                          (currentTool == TOOL_ERASER) ? "Eraser" :
-                          (currentTool == TOOL_RECTANGLE) ? "Rectangle" :
-                          (currentTool == TOOL_CIRCLE) ? "Circle" :
-                          (currentTool == TOOL_LINE) ? "Line" : "Color Picker";
+    WCHAR statusText1[200];
+    const WCHAR* toolName = (currentTool == TOOL_BRUSH) ? L"Brush" :
+                          (currentTool == TOOL_ERASER) ? L"Eraser" :
+                          (currentTool == TOOL_RECTANGLE) ? L"Rectangle" :
+                          (currentTool == TOOL_CIRCLE) ? L"Circle" :
+                          (currentTool == TOOL_LINE) ? L"Line" : L"Color Picker";
     
-    sprintf(statusText1, "Tool: %s | Size: %d | Zoom: %.0f%% | Grid: %s | Theme: %s | Points: %zu | F1: Help", 
+    swprintf(statusText1, 200, L"Tool: %s | Size: %d | Zoom: %.0f%% | Grid: %s | Theme: %s | Points: %zu | F1: Help", 
             toolName, brushSize, zoomLevel * 100,
-            showGrid ? "On" : "Off",
-            (currentTheme == THEME_LIGHT) ? "Light" : "Dark", 
+            showGrid ? L"On" : L"Off",
+            (currentTheme == THEME_LIGHT) ? L"Light" : L"Dark", 
             drawingPoints.size());
     
-    TextOut(hdc, 10, clientRect.bottom - STATUSBAR_HEIGHT + 5, statusText1, strlen(statusText1));
+    TextOut(hdc, 10, clientRect.bottom - STATUSBAR_HEIGHT + 5, statusText1, wcslen(statusText1));
 }
 
 COLORREF HSVtoRGB(float h, float s, float v) 
@@ -916,45 +923,45 @@ HMENU CreateMenuBar()
     HMENU hHelpMenu = CreatePopupMenu();
 
     // File Menu
-    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_NEW, "&New\tCtrl+N");
+    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_NEW, L"&New\tCtrl+N");
     AppendMenu(hFileMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_SAVE, "&Save\tCtrl+S");
-    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_SAVEAS, "Save &As...");
+    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_SAVE, L"&Save\tCtrl+S");
+    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_SAVEAS, L"Save &As...");
     AppendMenu(hFileMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_EXIT, "E&xit\tAlt+F4");
+    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_EXIT, L"E&xit\tAlt+F4");
 
     // Edit Menu
-    AppendMenu(hEditMenu, MF_STRING, IDM_EDIT_UNDO, "&Undo\tCtrl+Z");
-    AppendMenu(hEditMenu, MF_STRING, IDM_EDIT_REDO, "&Redo\tCtrl+Y");
+    AppendMenu(hEditMenu, MF_STRING, IDM_EDIT_UNDO, L"&Undo\tCtrl+Z");
+    AppendMenu(hEditMenu, MF_STRING, IDM_EDIT_REDO, L"&Redo\tCtrl+Y");
     AppendMenu(hEditMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hEditMenu, MF_STRING, IDM_EDIT_CLEAR, "&Clear Canvas\tCtrl+N");
+    AppendMenu(hEditMenu, MF_STRING, IDM_EDIT_CLEAR, L"&Clear Canvas\tCtrl+N");
 
     // View Menu
-    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_ZOOM_IN, "Zoom &In\tCtrl++");
-    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_ZOOM_OUT, "Zoom &Out\tCtrl+-");
-    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_ZOOM_FIT, "&Fit to Window\tCtrl+0");
+    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_ZOOM_IN, L"Zoom &In\tCtrl++");
+    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_ZOOM_OUT, L"Zoom &Out\tCtrl+-");
+    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_ZOOM_FIT, L"&Fit to Window\tCtrl+0");
     AppendMenu(hViewMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_GRID, "Show &Grid\tG");
+    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_GRID, L"Show &Grid\tG");
     AppendMenu(hViewMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_THEME, "Toggle &Theme\tCtrl+T");
+    AppendMenu(hViewMenu, MF_STRING, IDM_VIEW_THEME, L"Toggle &Theme\tCtrl+T");
 
     // Tools Menu
-    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_BRUSH, "&Brush Tool\tB");
-    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_ERASER, "&Eraser Tool\tE");
+    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_BRUSH, L"&Brush Tool\tB");
+    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_ERASER, L"&Eraser Tool\tE");
     AppendMenu(hToolsMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_RECT, "&Rectangle Tool\tR");
-    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_CIRCLE, "&Circle Tool\tC");
-    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_LINE, "&Line Tool\tL");
+    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_RECT, L"&Rectangle Tool\tR");
+    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_CIRCLE, L"&Circle Tool\tC");
+    AppendMenu(hToolsMenu, MF_STRING, IDM_TOOLS_LINE, L"&Line Tool\tL");
 
     // Help Menu
-    AppendMenu(hHelpMenu, MF_STRING, IDM_HELP_ABOUT, "&About\tF1");
+    AppendMenu(hHelpMenu, MF_STRING, IDM_HELP_ABOUT, L"&About\tF1");
 
     // Append submenus to main menu
-    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hFileMenu, "&File");
-    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hEditMenu, "&Edit");
-    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hViewMenu, "&View");
-    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hToolsMenu, "&Tools");
-    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hHelpMenu, "&Help");
+    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hFileMenu, L"&File");
+    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hEditMenu, L"&Edit");
+    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hViewMenu, L"&View");
+    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hToolsMenu, L"&Tools");
+    AppendMenu(hMenuBar, MF_POPUP, (UINT_PTR)hHelpMenu, L"&Help");
 
     return hMenuBar;
 }
@@ -977,7 +984,7 @@ void DrawAdvancedColorPicker(HDC hdc)
     // Title
     RECT titleRect = {pickerX + 10, pickerY + 5, pickerX + 190, pickerY + 25};
     SetBkMode(hdc, TRANSPARENT);
-    DrawText(hdc, "Advanced Color Picker", -1, &titleRect, DT_CENTER);
+    DrawText(hdc, L"Advanced Color Picker", -1, &titleRect, DT_CENTER);
     
     // Draw HSV color wheel
     int centerX = pickerX + 100;

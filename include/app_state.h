@@ -30,6 +30,11 @@ public:
     bool showAdvancedColorPicker = false;
     int pickerX = 400, pickerY = 200;
     
+    // UI state for hover effects
+    int hoveredTool = -1;  // -1 means no tool is hovered
+    bool hoveredAdvancedPicker = false;
+    bool hoveredThemeButton = false;
+    
     // GDI+ token
     ULONG_PTR gdiplusToken;
     

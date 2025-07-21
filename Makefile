@@ -15,7 +15,7 @@ TEST_DIR = tests
 
 # Source files organized by module
 CORE_SOURCES = $(SRC_DIR)/core/types.cpp $(SRC_DIR)/core/config.cpp $(SRC_DIR)/core/app_state.cpp $(SRC_DIR)/core/event_handler.cpp
-UI_SOURCES = $(SRC_DIR)/ui/ui_renderer.cpp
+UI_SOURCES = $(SRC_DIR)/ui/ui_renderer.cpp $(SRC_DIR)/ui/icon_renderer.cpp
 DRAWING_SOURCES = $(SRC_DIR)/drawing/drawing_engine.cpp
 MAIN_SOURCE = $(SRC_DIR)/main.cpp
 

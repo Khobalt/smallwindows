@@ -2,6 +2,7 @@
 #include "../../include/config.h"
 #include "../../include/app_state.h"
 #include "../../include/drawing_engine.h"
+#include "../../include/icon_resources.h"
 
 namespace UIRenderer {
 
@@ -23,26 +24,59 @@ void DrawToolbar(HDC hdc, RECT clientRect)
     SetBkMode(hdc, TRANSPARENT);
     SetTextColor(hdc, toolbarText);
     
-    // Tool buttons
-    const WCHAR* toolNames[] = {L"Brush", L"Eraser", L"Rect", L"Circle", L"Line", L"Picker"};
+    // Tool buttons with icons and hover effects
     for (int i = 0; i < 6; i++) {
         RECT buttonRect = {i * 50 + 5, 5, i * 50 + 45, 35};
-        COLORREF btnColor = (app.currentTool == i) ? activeBg : buttonBg;
+        
+        // Determine button colors based on state
+        COLORREF btnColor;
+        if (app.currentTool == i) {
+            btnColor = activeBg;  // Active tool - blue
+        } else if (app.hoveredTool == i) {
+            btnColor = (app.currentTheme == THEME_LIGHT) ? RGB(235, 235, 255) : RGB(80, 80, 100);  // Hover - light blue tint
+        } else {
+            btnColor = buttonBg;  // Normal state
+        }
+        
         HBRUSH btnBrush = CreateSolidBrush(btnColor);
         FillRect(hdc, &buttonRect, btnBrush);
         DeleteObject(btnBrush);
         
-        // Button border
-        HPEN borderPen = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
+        // Button border with enhanced style
+        int borderWidth = (app.currentTool == i) ? 2 : 1;
+        COLORREF borderColor;
+        if (app.currentTool == i) {
+            borderColor = RGB(255, 255, 255);  // Active - white border
+        } else if (app.hoveredTool == i) {
+            borderColor = RGB(180, 180, 180);  // Hover - lighter border
+        } else {
+            borderColor = RGB(128, 128, 128);  // Normal - gray border
+        }
+        
+        HPEN borderPen = CreatePen(PS_SOLID, borderWidth, borderColor);
         HPEN oldPen = (HPEN)SelectObject(hdc, borderPen);
         Rectangle(hdc, buttonRect.left, buttonRect.top, buttonRect.right, buttonRect.bottom);
         SelectObject(hdc, oldPen);
         DeleteObject(borderPen);
         
-        // Button text
-        RECT textRect = buttonRect;
-        textRect.top += 8;
-        DrawText(hdc, toolNames[i], -1, &textRect, DT_CENTER);
+        // Draw tool icon with appropriate color
+        const IconResources::Icon* icon = IconResources::GetToolIcon((ToolType)i);
+        if (icon) {
+            // Center the 16x16 icon in the 40x30 button
+            int iconX = buttonRect.left + (40 - 16) / 2;
+            int iconY = buttonRect.top + (30 - 16) / 2;
+            
+            COLORREF iconColor;
+            if (app.currentTool == i) {
+                iconColor = RGB(255, 255, 255);  // Active - white icon
+            } else if (app.hoveredTool == i) {
+                iconColor = (app.currentTheme == THEME_LIGHT) ? RGB(50, 50, 150) : RGB(200, 200, 255);  // Hover - darker/lighter
+            } else {
+                iconColor = toolbarText;  // Normal - theme text color
+            }
+            
+            IconResources::DrawIcon(hdc, iconX, iconY, icon, iconColor, 1);
+        }
     }
     
     // Color palette
@@ -63,14 +97,23 @@ void DrawToolbar(HDC hdc, RECT clientRect)
         }
     }
     
-    // Advanced color picker button
+    // Advanced color picker button with hover effect
     RECT pickerButtonRect = {545, 5, 590, 35};
-    COLORREF pickerBtnColor = app.showAdvancedColorPicker ? activeBg : buttonBg;
+    COLORREF pickerBtnColor;
+    if (app.showAdvancedColorPicker) {
+        pickerBtnColor = activeBg;  // Active - blue
+    } else if (app.hoveredAdvancedPicker) {
+        pickerBtnColor = (app.currentTheme == THEME_LIGHT) ? RGB(235, 235, 235) : RGB(70, 70, 70);  // Hover - lighter
+    } else {
+        pickerBtnColor = buttonBg;  // Normal
+    }
+    
     HBRUSH pickerBtnBrush = CreateSolidBrush(pickerBtnColor);
     FillRect(hdc, &pickerButtonRect, pickerBtnBrush);
     DeleteObject(pickerBtnBrush);
     
-    HPEN borderPen2 = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
+    COLORREF pickerBorderColor = app.hoveredAdvancedPicker ? RGB(180, 180, 180) : RGB(128, 128, 128);
+    HPEN borderPen2 = CreatePen(PS_SOLID, 1, pickerBorderColor);
     HPEN oldPen2 = (HPEN)SelectObject(hdc, borderPen2);
     Rectangle(hdc, pickerButtonRect.left, pickerButtonRect.top, pickerButtonRect.right, pickerButtonRect.bottom);
     SelectObject(hdc, oldPen2);
@@ -78,7 +121,10 @@ void DrawToolbar(HDC hdc, RECT clientRect)
     
     RECT pickerTextRect = pickerButtonRect;
     pickerTextRect.top += 8;
+    COLORREF pickerTextColor = app.showAdvancedColorPicker ? RGB(255, 255, 255) : toolbarText;
+    SetTextColor(hdc, pickerTextColor);
     DrawText(hdc, L"More", -1, &pickerTextRect, DT_CENTER);
+    SetTextColor(hdc, toolbarText);  // Reset text color
     
     // Brush size slider
     TextOut(hdc, 560, 10, L"Size:", 5);
@@ -94,13 +140,16 @@ void DrawToolbar(HDC hdc, RECT clientRect)
     FillRect(hdc, &sizeIndicator, sizeBrush);
     DeleteObject(sizeBrush);
     
-    // Theme toggle button
+    // Theme toggle button with hover effect
     RECT themeRect = {750, 5, 820, 35};
-    HBRUSH themeBrush = CreateSolidBrush(buttonBg);
+    COLORREF themeBtnColor = app.hoveredThemeButton ? 
+        ((app.currentTheme == THEME_LIGHT) ? RGB(235, 235, 235) : RGB(70, 70, 70)) : buttonBg;
+    HBRUSH themeBrush = CreateSolidBrush(themeBtnColor);
     FillRect(hdc, &themeRect, themeBrush);
     DeleteObject(themeBrush);
     
-    HPEN borderPen = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
+    COLORREF themeBorderColor = app.hoveredThemeButton ? RGB(180, 180, 180) : RGB(128, 128, 128);
+    HPEN borderPen = CreatePen(PS_SOLID, 1, themeBorderColor);
     HPEN oldPen = (HPEN)SelectObject(hdc, borderPen);
     Rectangle(hdc, themeRect.left, themeRect.top, themeRect.right, themeRect.bottom);
     SelectObject(hdc, oldPen);

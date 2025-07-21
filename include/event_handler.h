@@ -8,6 +8,7 @@ namespace EventHandler {
     // Mouse events
     void OnLeftButtonDown(HWND hwnd, int x, int y);
     void OnMouseMove(HWND hwnd, WPARAM wParam, int x, int y);
+    void OnMouseHover(HWND hwnd, int x, int y);
     void OnLeftButtonUp(HWND hwnd, int x, int y);
     void OnRightButtonDown(HWND hwnd, int x, int y);
     void OnMouseWheel(HWND hwnd, WPARAM wParam, LPARAM lParam);

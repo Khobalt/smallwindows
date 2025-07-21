@@ -19,6 +19,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
             
         case WM_MOUSEMOVE:
             EventHandler::OnMouseMove(hwnd, wParam, LOWORD(lParam), HIWORD(lParam));
+            EventHandler::OnMouseHover(hwnd, LOWORD(lParam), HIWORD(lParam));
             break;
             
         case WM_LBUTTONUP:
@@ -681,6 +682,53 @@ void OnCommand(HWND hwnd, WPARAM wParam)
         case IDM_HELP_ABOUT:
             OnKeyDown(hwnd, VK_F1);
             break;
+    }
+}
+
+void OnMouseHover(HWND hwnd, int x, int y)
+{
+    AppState& app = AppState::Instance();
+    bool needsRedraw = false;
+    
+    // Reset hover states
+    int oldHoveredTool = app.hoveredTool;
+    bool oldHoveredAdvancedPicker = app.hoveredAdvancedPicker;
+    bool oldHoveredThemeButton = app.hoveredThemeButton;
+    
+    app.hoveredTool = -1;
+    app.hoveredAdvancedPicker = false;
+    app.hoveredThemeButton = false;
+    
+    // Check if mouse is in toolbar area
+    if (y >= 5 && y <= 35) {
+        // Check tool buttons (6 tools, 50px wide each, starting at x=5)
+        for (int i = 0; i < 6; i++) {
+            RECT buttonRect = {i * 50 + 5, 5, i * 50 + 45, 35};
+            if (x >= buttonRect.left && x <= buttonRect.right) {
+                app.hoveredTool = i;
+                break;
+            }
+        }
+        
+        // Check advanced color picker button (x=545-590)
+        if (x >= 545 && x <= 590) {
+            app.hoveredAdvancedPicker = true;
+        }
+        
+        // Check theme button (x=750-820)
+        if (x >= 750 && x <= 820) {
+            app.hoveredThemeButton = true;
+        }
+    }
+    
+    // Only redraw toolbar if hover states changed
+    if (oldHoveredTool != app.hoveredTool || 
+        oldHoveredAdvancedPicker != app.hoveredAdvancedPicker ||
+        oldHoveredThemeButton != app.hoveredThemeButton) {
+        
+        // Invalidate just the toolbar area for efficiency
+        RECT toolbarRect = {0, 0, 1000, TOOLBAR_HEIGHT};
+        InvalidateRect(hwnd, &toolbarRect, FALSE);
     }
 }
 

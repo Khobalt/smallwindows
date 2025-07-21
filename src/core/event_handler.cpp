@@ -109,28 +109,33 @@ void OnPaint(HWND hwnd)
     RECT clientRect;
     GetClientRect(hwnd, &clientRect);
     
-    // Clear background
+    // Double buffering: Create memory DC and bitmap
+    HDC memDC = CreateCompatibleDC(hdc);
+    HBITMAP memBitmap = CreateCompatibleBitmap(hdc, clientRect.right, clientRect.bottom);
+    HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, memBitmap);
+    
+    // Clear background on memory DC
     COLORREF bgColor = (app.currentTheme == THEME_LIGHT) ? RGB(255, 255, 255) : RGB(30, 30, 30);
     HBRUSH bgBrush = CreateSolidBrush(bgColor);
-    FillRect(hdc, &clientRect, bgBrush);
+    FillRect(memDC, &clientRect, bgBrush);
     DeleteObject(bgBrush);
     
     // Draw grid if enabled
     if (app.showGrid) {
         HPEN gridPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
-        HPEN oldPen = (HPEN)SelectObject(hdc, gridPen);
+        HPEN oldPen = (HPEN)SelectObject(memDC, gridPen);
         
         int gridSize = (int)(20 * app.zoomLevel);
         for (int x = app.panX % gridSize; x < clientRect.right; x += gridSize) {
-            MoveToEx(hdc, x, TOOLBAR_HEIGHT, NULL);
-            LineTo(hdc, x, clientRect.bottom - STATUSBAR_HEIGHT);
+            MoveToEx(memDC, x, TOOLBAR_HEIGHT, NULL);
+            LineTo(memDC, x, clientRect.bottom - STATUSBAR_HEIGHT);
         }
         for (int y = TOOLBAR_HEIGHT + (app.panY % gridSize); y < clientRect.bottom - STATUSBAR_HEIGHT; y += gridSize) {
-            MoveToEx(hdc, 0, y, NULL);
-            LineTo(hdc, clientRect.right, y);
+            MoveToEx(memDC, 0, y, NULL);
+            LineTo(memDC, clientRect.right, y);
         }
         
-        SelectObject(hdc, oldPen);
+        SelectObject(memDC, oldPen);
         DeleteObject(gridPen);
     }
     
@@ -154,26 +159,26 @@ void OnPaint(HWND hwnd)
                 
                 // Draw line from previous point to current point with brush size
                 HPEN strokePen = CreatePen(PS_SOLID, scaledBrushSize, point.color);
-                HPEN oldPen = (HPEN)SelectObject(hdc, strokePen);
+                HPEN oldPen = (HPEN)SelectObject(memDC, strokePen);
                 
                 // Draw thick line between points
-                MoveToEx(hdc, prevX, prevY, NULL);
-                LineTo(hdc, currX, currY);
+                MoveToEx(memDC, prevX, prevY, NULL);
+                LineTo(memDC, currX, currY);
                 
                 // Draw circular brush at current point for smooth appearance
                 HBRUSH pointBrush = CreateSolidBrush(point.color);
-                HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, pointBrush);
-                SelectObject(hdc, GetStockObject(NULL_PEN)); // No outline
+                HBRUSH oldBrush = (HBRUSH)SelectObject(memDC, pointBrush);
+                SelectObject(memDC, GetStockObject(NULL_PEN)); // No outline
                 
-                Ellipse(hdc, 
+                Ellipse(memDC, 
                         currX - scaledBrushSize/2, 
                         currY - scaledBrushSize/2,
                         currX + scaledBrushSize/2, 
                         currY + scaledBrushSize/2);
                 
-                SelectObject(hdc, oldBrush);
+                SelectObject(memDC, oldBrush);
                 DeleteObject(pointBrush);
-                SelectObject(hdc, oldPen);
+                SelectObject(memDC, oldPen);
                 DeleteObject(strokePen);
                 
                 prevPoint = const_cast<DrawPoint*>(&point);
@@ -189,28 +194,36 @@ void OnPaint(HWND hwnd)
                 int scaledBrushSize = (int)(point.brushSize * app.zoomLevel);
                 
                 HBRUSH pointBrush = CreateSolidBrush(point.color);
-                HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, pointBrush);
-                SelectObject(hdc, GetStockObject(NULL_PEN)); // No outline
+                HBRUSH oldBrush = (HBRUSH)SelectObject(memDC, pointBrush);
+                SelectObject(memDC, GetStockObject(NULL_PEN)); // No outline
                 
-                Ellipse(hdc, 
+                Ellipse(memDC, 
                         x - scaledBrushSize/2, 
                         y - scaledBrushSize/2,
                         x + scaledBrushSize/2, 
                         y + scaledBrushSize/2);
                 
-                SelectObject(hdc, oldBrush);
+                SelectObject(memDC, oldBrush);
                 DeleteObject(pointBrush);
             }
         }
     }
     
-    // Draw UI elements
-    UIRenderer::DrawToolbar(hdc, clientRect);
-    UIRenderer::DrawStatusBar(hdc, clientRect);
+    // Draw UI elements on memory DC
+    UIRenderer::DrawToolbar(memDC, clientRect);
+    UIRenderer::DrawStatusBar(memDC, clientRect);
     
     if (app.showAdvancedColorPicker) {
-        UIRenderer::DrawAdvancedColorPicker(hdc);
+        UIRenderer::DrawAdvancedColorPicker(memDC);
     }
+    
+    // Blit the memory DC to the screen DC (eliminates flicker!)
+    BitBlt(hdc, 0, 0, clientRect.right, clientRect.bottom, memDC, 0, 0, SRCCOPY);
+    
+    // Clean up double buffering resources
+    SelectObject(memDC, oldBitmap);
+    DeleteObject(memBitmap);
+    DeleteDC(memDC);
     
     EndPaint(hwnd, &ps);
 }
@@ -236,7 +249,7 @@ void OnLeftButtonDown(HWND hwnd, int x, int y)
             }
         } else if (x >= 545 && x <= 590) { // Advanced color picker toggle
             app.showAdvancedColorPicker = !app.showAdvancedColorPicker;
-            InvalidateRect(hwnd, NULL, FALSE); // Color picker affects entire screen
+            InvalidateToolbar(hwnd); // Only toolbar needs redraw for color picker toggle
         } else if (x >= 600 && x <= 700) { // Brush size slider
             int newSize = 1 + ((x - 600) * 19) / 100;
             DrawingEngine::SetBrushSize(newSize);
@@ -244,7 +257,7 @@ void OnLeftButtonDown(HWND hwnd, int x, int y)
             InvalidateStatusBar(hwnd);
         } else if (x >= 750 && x <= 820) { // Theme toggle
             app.currentTheme = (app.currentTheme == THEME_LIGHT) ? THEME_DARK : THEME_LIGHT;
-            InvalidateRect(hwnd, NULL, FALSE); // Theme affects entire screen
+            InvalidateRect(hwnd, NULL, FALSE); // Theme affects entire screen - keep full redraw
         }
     } else if (app.showAdvancedColorPicker && 
                x >= app.pickerX && x <= app.pickerX + 200 && 
@@ -512,15 +525,16 @@ void OnKeyDown(HWND hwnd, WPARAM wParam)
             
         case 'G':
             app.showGrid = !app.showGrid;
-            InvalidateRect(hwnd, NULL, FALSE);
+            InvalidateCanvas(hwnd);  // Only canvas needs redraw for grid
+            InvalidateStatusBar(hwnd);  // Status bar shows grid state
             break;
             
         // Tool shortcuts
-        case 'B': DrawingEngine::SetTool(TOOL_BRUSH); InvalidateRect(hwnd, NULL, FALSE); break;
-        case 'E': DrawingEngine::SetTool(TOOL_ERASER); InvalidateRect(hwnd, NULL, FALSE); break;
-        case 'R': DrawingEngine::SetTool(TOOL_RECTANGLE); InvalidateRect(hwnd, NULL, FALSE); break;
-        case 'C': DrawingEngine::SetTool(TOOL_CIRCLE); InvalidateRect(hwnd, NULL, FALSE); break;
-        case 'L': DrawingEngine::SetTool(TOOL_LINE); InvalidateRect(hwnd, NULL, FALSE); break;
+        case 'B': DrawingEngine::SetTool(TOOL_BRUSH); InvalidateToolbar(hwnd); InvalidateStatusBar(hwnd); break;
+        case 'E': DrawingEngine::SetTool(TOOL_ERASER); InvalidateToolbar(hwnd); InvalidateStatusBar(hwnd); break;
+        case 'R': DrawingEngine::SetTool(TOOL_RECTANGLE); InvalidateToolbar(hwnd); InvalidateStatusBar(hwnd); break;
+        case 'C': DrawingEngine::SetTool(TOOL_CIRCLE); InvalidateToolbar(hwnd); InvalidateStatusBar(hwnd); break;
+        case 'L': DrawingEngine::SetTool(TOOL_LINE); InvalidateToolbar(hwnd); InvalidateStatusBar(hwnd); break;
         
         // Brush size shortcuts
         case '1': case '2': case '3': case '4': case '5': 
@@ -528,7 +542,8 @@ void OnKeyDown(HWND hwnd, WPARAM wParam)
         {
             int size = (wParam - '0') * 2;
             DrawingEngine::SetBrushSize(size);
-            InvalidateRect(hwnd, NULL, FALSE);
+            InvalidateToolbar(hwnd);
+            InvalidateStatusBar(hwnd);
             break;
         }
         

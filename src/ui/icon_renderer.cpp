@@ -26,8 +26,10 @@ void DrawIcon(HDC hdc, int x, int y, const Icon* icon, COLORREF color, int scale
     // Create a brush for drawing pixels
     HBRUSH iconBrush = CreateSolidBrush(color);
     HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, iconBrush);
+    HPEN nullPen = CreatePen(PS_NULL, 0, 0);  // No border
+    HPEN oldPen = (HPEN)SelectObject(hdc, nullPen);
     
-    // Parse the icon data and draw pixels
+    // Parse the icon data and draw rectangles instead of pixels
     const char* data = icon->data;
     int dataIndex = 0;
     
@@ -41,18 +43,18 @@ void DrawIcon(HDC hdc, int x, int y, const Icon* icon, COLORREF color, int scale
             if (data[dataIndex] == '\0') break;
             
             if (data[dataIndex] == '1') {
-                // Draw pixel(s) based on scale
-                for (int sy = 0; sy < scale; sy++) {
-                    for (int sx = 0; sx < scale; sx++) {
-                        SetPixel(hdc, x + col * scale + sx, y + row * scale + sy, color);
-                    }
-                }
+                // Draw rectangle instead of individual pixels - much faster!
+                int rectX = x + col * scale;
+                int rectY = y + row * scale;
+                Rectangle(hdc, rectX, rectY, rectX + scale, rectY + scale);
             }
             dataIndex++;
         }
     }
     
+    SelectObject(hdc, oldPen);
     SelectObject(hdc, oldBrush);
+    DeleteObject(nullPen);
     DeleteObject(iconBrush);
 }
 

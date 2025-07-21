@@ -219,7 +219,7 @@ void DrawAdvancedColorPicker(HDC hdc)
     int centerY = app.pickerY + 100;
     int radius = 80;
     
-    // Draw color wheel pixels
+    // Draw color wheel with small rectangles instead of pixels
     for (int y = -radius; y <= radius; y += 2) {
         for (int x = -radius; x <= radius; x += 2) {
             float distance = sqrt(x * x + y * y);
@@ -229,7 +229,12 @@ void DrawAdvancedColorPicker(HDC hdc)
                 float saturation = distance / radius;
                 
                 COLORREF color = DrawingEngine::HSVtoRGB(angle, saturation, 0.9f);
-                SetPixel(hdc, centerX + x, centerY + y, color);
+                
+                // Draw small rectangle instead of pixel
+                HBRUSH colorBrush = CreateSolidBrush(color);
+                RECT pixelRect = {centerX + x, centerY + y, centerX + x + 2, centerY + y + 2};
+                FillRect(hdc, &pixelRect, colorBrush);
+                DeleteObject(colorBrush);
             }
         }
     }

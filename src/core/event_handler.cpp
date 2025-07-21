@@ -57,6 +57,23 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 
 namespace EventHandler {
 
+// Helper functions for coordinate transformation
+static int ScreenToWorldX(int screenX, const AppState& app) {
+    return (int)((screenX - app.panX) / app.zoomLevel);
+}
+
+static int ScreenToWorldY(int screenY, const AppState& app) {
+    return (int)((screenY - app.panY - TOOLBAR_HEIGHT) / app.zoomLevel);
+}
+
+static int WorldToScreenX(int worldX, const AppState& app) {
+    return (int)(worldX * app.zoomLevel + app.panX);
+}
+
+static int WorldToScreenY(int worldY, const AppState& app) {
+    return (int)(worldY * app.zoomLevel + app.panY + TOOLBAR_HEIGHT);
+}
+
 // Helper function to invalidate only the necessary parts
 static void InvalidateCanvas(HWND hwnd) {
     RECT clientRect;
@@ -127,13 +144,20 @@ void OnPaint(HWND hwnd)
                 // Start new stroke - just remember this point
                 prevPoint = const_cast<DrawPoint*>(&point);
             } else if (prevPoint != nullptr) {
+                // Apply zoom and pan transformations
+                int prevX = (int)(prevPoint->x * app.zoomLevel + app.panX);
+                int prevY = (int)(prevPoint->y * app.zoomLevel + app.panY + TOOLBAR_HEIGHT);
+                int currX = (int)(point.x * app.zoomLevel + app.panX);
+                int currY = (int)(point.y * app.zoomLevel + app.panY + TOOLBAR_HEIGHT);
+                int scaledBrushSize = (int)(point.brushSize * app.zoomLevel);
+                
                 // Draw line from previous point to current point with brush size
-                HPEN strokePen = CreatePen(PS_SOLID, point.brushSize, point.color);
+                HPEN strokePen = CreatePen(PS_SOLID, scaledBrushSize, point.color);
                 HPEN oldPen = (HPEN)SelectObject(hdc, strokePen);
                 
                 // Draw thick line between points
-                MoveToEx(hdc, prevPoint->x, prevPoint->y, NULL);
-                LineTo(hdc, point.x, point.y);
+                MoveToEx(hdc, prevX, prevY, NULL);
+                LineTo(hdc, currX, currY);
                 
                 // Draw circular brush at current point for smooth appearance
                 HBRUSH pointBrush = CreateSolidBrush(point.color);
@@ -141,10 +165,10 @@ void OnPaint(HWND hwnd)
                 SelectObject(hdc, GetStockObject(NULL_PEN)); // No outline
                 
                 Ellipse(hdc, 
-                        point.x - point.brushSize/2, 
-                        point.y - point.brushSize/2,
-                        point.x + point.brushSize/2, 
-                        point.y + point.brushSize/2);
+                        currX - scaledBrushSize/2, 
+                        currY - scaledBrushSize/2,
+                        currX + scaledBrushSize/2, 
+                        currY + scaledBrushSize/2);
                 
                 SelectObject(hdc, oldBrush);
                 DeleteObject(pointBrush);
@@ -158,15 +182,20 @@ void OnPaint(HWND hwnd)
         // Draw starting points that don't have connections
         for (const DrawPoint& point : app.drawingPoints) {
             if (point.isStart) {
+                // Apply zoom and pan transformations
+                int x = (int)(point.x * app.zoomLevel + app.panX);
+                int y = (int)(point.y * app.zoomLevel + app.panY + TOOLBAR_HEIGHT);
+                int scaledBrushSize = (int)(point.brushSize * app.zoomLevel);
+                
                 HBRUSH pointBrush = CreateSolidBrush(point.color);
                 HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, pointBrush);
                 SelectObject(hdc, GetStockObject(NULL_PEN)); // No outline
                 
                 Ellipse(hdc, 
-                        point.x - point.brushSize/2, 
-                        point.y - point.brushSize/2,
-                        point.x + point.brushSize/2, 
-                        point.y + point.brushSize/2);
+                        x - scaledBrushSize/2, 
+                        y - scaledBrushSize/2,
+                        x + scaledBrushSize/2, 
+                        y + scaledBrushSize/2);
                 
                 SelectObject(hdc, oldBrush);
                 DeleteObject(pointBrush);
@@ -251,7 +280,10 @@ void OnLeftButtonDown(HWND hwnd, int x, int y)
                 InvalidateToolbar(hwnd);
                 InvalidateStatusBar(hwnd);
             } else {
-                DrawingEngine::StartDrawing(x, y);
+                // Transform screen coordinates to world coordinates
+                int worldX = ScreenToWorldX(x, app);
+                int worldY = ScreenToWorldY(y, app);
+                DrawingEngine::StartDrawing(worldX, worldY);
                 InvalidateCanvas(hwnd);
             }
         }
@@ -267,23 +299,35 @@ void OnMouseMove(HWND hwnd, WPARAM wParam, int x, int y)
             AppState& app = AppState::Instance();
             
             if (app.currentTool == TOOL_BRUSH || app.currentTool == TOOL_ERASER) {
-                // For brush and eraser, continue drawing and invalidate small area
-                DrawingEngine::ContinueDrawing(x, y);
+                // Transform screen coordinates to world coordinates
+                int worldX = ScreenToWorldX(x, app);
+                int worldY = ScreenToWorldY(y, app);
+                DrawingEngine::ContinueDrawing(worldX, worldY);
                 
-                // Invalidate only a small area around the drawing point
-                int brushSize = app.brushSize;
+                // Invalidate only a small area around the drawing point (in screen space)
+                int scaledBrushSize = (int)(app.brushSize * app.zoomLevel);
                 RECT updateRect = {
-                    x - brushSize - 5, y - brushSize - 5,
-                    x + brushSize + 5, y + brushSize + 5
+                    x - scaledBrushSize - 5, y - scaledBrushSize - 5,
+                    x + scaledBrushSize + 5, y + scaledBrushSize + 5
                 };
                 InvalidateRect(hwnd, &updateRect, FALSE);
             } else if (app.currentTool == TOOL_RECTANGLE || app.currentTool == TOOL_CIRCLE || app.currentTool == TOOL_LINE) {
                 // For shapes, update preview coordinates but use XOR drawing to avoid flashing
                 int oldX = app.drawCurrentX;
                 int oldY = app.drawCurrentY;
-                DrawingEngine::ContinueDrawing(x, y);
+                int worldX = ScreenToWorldX(x, app);
+                int worldY = ScreenToWorldY(y, app);
+                DrawingEngine::ContinueDrawing(worldX, worldY);
                 
                 // Use direct drawing with XOR for preview (no invalidate needed)
+                // Convert world coordinates to screen coordinates for XOR drawing
+                int screenStartX = WorldToScreenX(app.drawStartX, app);
+                int screenStartY = WorldToScreenY(app.drawStartY, app);
+                int screenOldX = WorldToScreenX(oldX, app);
+                int screenOldY = WorldToScreenY(oldY, app);
+                int screenNewX = WorldToScreenX(app.drawCurrentX, app);
+                int screenNewY = WorldToScreenY(app.drawCurrentY, app);
+                
                 HDC hdc = GetDC(hwnd);
                 SetROP2(hdc, R2_XORPEN);
                 HPEN xorPen = CreatePen(PS_SOLID, 1, RGB(255, 255, 255));
@@ -293,36 +337,36 @@ void OnMouseMove(HWND hwnd, WPARAM wParam, int x, int y)
                 if (app.currentTool == TOOL_RECTANGLE) {
                     HBRUSH nullBrush = (HBRUSH)GetStockObject(NULL_BRUSH);
                     HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, nullBrush);
-                    Rectangle(hdc, app.drawStartX, app.drawStartY, oldX, oldY);
+                    Rectangle(hdc, screenStartX, screenStartY, screenOldX, screenOldY);
                     SelectObject(hdc, oldBrush);
                 } else if (app.currentTool == TOOL_CIRCLE) {
-                    int oldRadius = (int)sqrt(pow(oldX - app.drawStartX, 2) + pow(oldY - app.drawStartY, 2));
+                    int oldRadius = (int)(sqrt(pow(oldX - app.drawStartX, 2) + pow(oldY - app.drawStartY, 2)) * app.zoomLevel);
                     HBRUSH nullBrush = (HBRUSH)GetStockObject(NULL_BRUSH);
                     HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, nullBrush);
-                    Ellipse(hdc, app.drawStartX - oldRadius, app.drawStartY - oldRadius, 
-                            app.drawStartX + oldRadius, app.drawStartY + oldRadius);
+                    Ellipse(hdc, screenStartX - oldRadius, screenStartY - oldRadius, 
+                            screenStartX + oldRadius, screenStartY + oldRadius);
                     SelectObject(hdc, oldBrush);
                 } else if (app.currentTool == TOOL_LINE) {
-                    MoveToEx(hdc, app.drawStartX, app.drawStartY, NULL);
-                    LineTo(hdc, oldX, oldY);
+                    MoveToEx(hdc, screenStartX, screenStartY, NULL);
+                    LineTo(hdc, screenOldX, screenOldY);
                 }
                 
                 // Draw new preview
                 if (app.currentTool == TOOL_RECTANGLE) {
                     HBRUSH nullBrush = (HBRUSH)GetStockObject(NULL_BRUSH);
                     HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, nullBrush);
-                    Rectangle(hdc, app.drawStartX, app.drawStartY, x, y);
+                    Rectangle(hdc, screenStartX, screenStartY, screenNewX, screenNewY);
                     SelectObject(hdc, oldBrush);
                 } else if (app.currentTool == TOOL_CIRCLE) {
-                    int newRadius = (int)sqrt(pow(x - app.drawStartX, 2) + pow(y - app.drawStartY, 2));
+                    int newRadius = (int)(sqrt(pow(app.drawCurrentX - app.drawStartX, 2) + pow(app.drawCurrentY - app.drawStartY, 2)) * app.zoomLevel);
                     HBRUSH nullBrush = (HBRUSH)GetStockObject(NULL_BRUSH);
                     HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, nullBrush);
-                    Ellipse(hdc, app.drawStartX - newRadius, app.drawStartY - newRadius, 
-                            app.drawStartX + newRadius, app.drawStartY + newRadius);
+                    Ellipse(hdc, screenStartX - newRadius, screenStartY - newRadius, 
+                            screenStartX + newRadius, screenStartY + newRadius);
                     SelectObject(hdc, oldBrush);
                 } else if (app.currentTool == TOOL_LINE) {
-                    MoveToEx(hdc, app.drawStartX, app.drawStartY, NULL);
-                    LineTo(hdc, x, y);
+                    MoveToEx(hdc, screenStartX, screenStartY, NULL);
+                    LineTo(hdc, screenNewX, screenNewY);
                 }
                 
                 SelectObject(hdc, oldPen);
@@ -345,22 +389,27 @@ void OnLeftButtonUp(HWND hwnd, int x, int y)
         HPEN xorPen = CreatePen(PS_SOLID, 1, RGB(255, 255, 255));
         HPEN oldPen = (HPEN)SelectObject(hdc, xorPen);
         
-        // Clear the preview by drawing it again (XOR toggles)
+        // Clear the preview by drawing it again (XOR toggles) - use screen coordinates
+        int screenStartX = WorldToScreenX(app.drawStartX, app);
+        int screenStartY = WorldToScreenY(app.drawStartY, app);
+        int screenCurrentX = WorldToScreenX(app.drawCurrentX, app);
+        int screenCurrentY = WorldToScreenY(app.drawCurrentY, app);
+        
         if (app.currentTool == TOOL_RECTANGLE) {
             HBRUSH nullBrush = (HBRUSH)GetStockObject(NULL_BRUSH);
             HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, nullBrush);
-            Rectangle(hdc, app.drawStartX, app.drawStartY, app.drawCurrentX, app.drawCurrentY);
+            Rectangle(hdc, screenStartX, screenStartY, screenCurrentX, screenCurrentY);
             SelectObject(hdc, oldBrush);
         } else if (app.currentTool == TOOL_CIRCLE) {
-            int radius = (int)sqrt(pow(app.drawCurrentX - app.drawStartX, 2) + pow(app.drawCurrentY - app.drawStartY, 2));
+            int radius = (int)(sqrt(pow(app.drawCurrentX - app.drawStartX, 2) + pow(app.drawCurrentY - app.drawStartY, 2)) * app.zoomLevel);
             HBRUSH nullBrush = (HBRUSH)GetStockObject(NULL_BRUSH);
             HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, nullBrush);
-            Ellipse(hdc, app.drawStartX - radius, app.drawStartY - radius, 
-                    app.drawStartX + radius, app.drawStartY + radius);
+            Ellipse(hdc, screenStartX - radius, screenStartY - radius, 
+                    screenStartX + radius, screenStartY + radius);
             SelectObject(hdc, oldBrush);
         } else if (app.currentTool == TOOL_LINE) {
-            MoveToEx(hdc, app.drawStartX, app.drawStartY, NULL);
-            LineTo(hdc, app.drawCurrentX, app.drawCurrentY);
+            MoveToEx(hdc, screenStartX, screenStartY, NULL);
+            LineTo(hdc, screenCurrentX, screenCurrentY);
         }
         
         SelectObject(hdc, oldPen);

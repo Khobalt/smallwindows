@@ -27,3 +27,4 @@ bin/
 *.tmp
 *~
 .DS_Store
+all_source_code.txt

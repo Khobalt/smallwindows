@@ -1,2 +1,29 @@
+# Executables
 *.exe
+
+# Build artifacts
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+
+# Build directories
+build/
+bin/
+
+# IDE files
+.vscode/
+*.vcxproj*
+*.sln
+*.suo
+
+# Claude settings
 .claude/settings.local.json
+
+# Temporary files
+*.tmp
+*~
+.DS_Store

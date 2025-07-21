@@ -150,8 +150,12 @@ void OnPaintGPU(HWND hwnd, RECT clientRect)
     
     // Draw UI elements - GPU accelerated!
     UIRenderer::DrawToolbarGPU(clientRect);
-    // Note: Status bar and color picker still use software rendering for now
-    // Will be ported in next phase
+    UIRenderer::DrawStatusBarGPU(clientRect);
+    
+    // Draw advanced color picker if visible - GPU accelerated!
+    if (app.showAdvancedColorPicker) {
+        UIRenderer::DrawAdvancedColorPickerGPU(clientRect);
+    }
     
     // End GPU rendering
     GPURenderer::GPURenderingEngine::EndDraw();

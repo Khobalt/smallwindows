@@ -9,7 +9,9 @@ namespace UIRenderer {
     void DrawToolbarGPU(RECT clientRect);  // GPU-accelerated version
     void DrawToolbarSoftware(HDC hdc, RECT clientRect);  // Software fallback
     void DrawStatusBar(HDC hdc, RECT clientRect);
+    void DrawStatusBarGPU(RECT clientRect);  // GPU-accelerated version
     void DrawAdvancedColorPicker(HDC hdc);
+    void DrawAdvancedColorPickerGPU(RECT clientRect);  // GPU-accelerated version
     HMENU CreateMenuBar();
 }
 

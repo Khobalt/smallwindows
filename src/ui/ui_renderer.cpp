@@ -19,87 +19,101 @@ void DrawToolbar(HDC hdc, RECT clientRect)
 
 void DrawStatusBar(HDC hdc, RECT clientRect)
 {
-    AppState& app = AppState::Instance();
-    
-    COLORREF statusBg = (app.currentTheme == THEME_LIGHT) ? RGB(240, 240, 240) : RGB(37, 37, 38);
-    RECT statusRect = {0, clientRect.bottom - STATUSBAR_HEIGHT, clientRect.right, clientRect.bottom};
-    HBRUSH statusBrush = CreateSolidBrush(statusBg);
-    FillRect(hdc, &statusRect, statusBrush);
-    DeleteObject(statusBrush);
-    
-    SetBkMode(hdc, TRANSPARENT);
-    COLORREF statusText = (app.currentTheme == THEME_LIGHT) ? RGB(0, 0, 0) : RGB(255, 255, 255);
-    SetTextColor(hdc, statusText);
-    
-    WCHAR statusText1[200];
-    const WCHAR* toolName = (app.currentTool == TOOL_BRUSH) ? L"Brush" :
-                          (app.currentTool == TOOL_ERASER) ? L"Eraser" :
-                          (app.currentTool == TOOL_RECTANGLE) ? L"Rectangle" :
-                          (app.currentTool == TOOL_CIRCLE) ? L"Circle" :
-                          (app.currentTool == TOOL_LINE) ? L"Line" : L"Color Picker";
-    
-    swprintf(statusText1, 200, L"Tool: %s | Size: %d | Zoom: %.0f%% | Grid: %s | Theme: %s | Points: %zu | F1: Help", 
-            toolName, app.brushSize, app.zoomLevel * 100,
-            app.showGrid ? L"On" : L"Off",
-            (app.currentTheme == THEME_LIGHT) ? L"Light" : L"Dark", 
-            app.drawingPoints.size());
-    
-    TextOut(hdc, 10, clientRect.bottom - STATUSBAR_HEIGHT + 5, statusText1, wcslen(statusText1));
+    // Check if GPU rendering is available and delegate accordingly
+    if (GPURenderer::GPURenderingEngine::GetContext().initialized) {
+        DrawStatusBarGPU(clientRect);
+    } else {
+        // Original software-based implementation (fallback)
+        AppState& app = AppState::Instance();
+        
+        COLORREF statusBg = (app.currentTheme == THEME_LIGHT) ? RGB(240, 240, 240) : RGB(37, 37, 38);
+        RECT statusRect = {0, clientRect.bottom - STATUSBAR_HEIGHT, clientRect.right, clientRect.bottom};
+        HBRUSH statusBrush = CreateSolidBrush(statusBg);
+        FillRect(hdc, &statusRect, statusBrush);
+        DeleteObject(statusBrush);
+        
+        SetBkMode(hdc, TRANSPARENT);
+        COLORREF statusText = (app.currentTheme == THEME_LIGHT) ? RGB(0, 0, 0) : RGB(255, 255, 255);
+        SetTextColor(hdc, statusText);
+        
+        WCHAR statusText1[200];
+        const WCHAR* toolName = (app.currentTool == TOOL_BRUSH) ? L"Brush" :
+                              (app.currentTool == TOOL_ERASER) ? L"Eraser" :
+                              (app.currentTool == TOOL_RECTANGLE) ? L"Rectangle" :
+                              (app.currentTool == TOOL_CIRCLE) ? L"Circle" :
+                              (app.currentTool == TOOL_LINE) ? L"Line" : L"Color Picker";
+        
+        swprintf(statusText1, 200, L"Tool: %s | Size: %d | Zoom: %.0f%% | Grid: %s | Theme: %s | Points: %zu | F1: Help", 
+                toolName, app.brushSize, app.zoomLevel * 100,
+                app.showGrid ? L"On" : L"Off",
+                (app.currentTheme == THEME_LIGHT) ? L"Light" : L"Dark", 
+                app.drawingPoints.size());
+        
+        TextOut(hdc, 10, clientRect.bottom - STATUSBAR_HEIGHT + 5, statusText1, wcslen(statusText1));
+    }
 }
 
 void DrawAdvancedColorPicker(HDC hdc)
 {
     AppState& app = AppState::Instance();
     
-    // Background
-    RECT pickerBg = {app.pickerX, app.pickerY, app.pickerX + 200, app.pickerY + 200};
-    HBRUSH bgBrush = CreateSolidBrush(RGB(240, 240, 240));
-    FillRect(hdc, &pickerBg, bgBrush);
-    DeleteObject(bgBrush);
-    
-    // Border
-    HPEN borderPen = CreatePen(PS_SOLID, 2, RGB(100, 100, 100));
-    HPEN oldPen = (HPEN)SelectObject(hdc, borderPen);
-    Rectangle(hdc, pickerBg.left, pickerBg.top, pickerBg.right, pickerBg.bottom);
-    SelectObject(hdc, oldPen);
-    DeleteObject(borderPen);
-    
-    // Title
-    SetBkMode(hdc, TRANSPARENT);
-    SetTextColor(hdc, RGB(0, 0, 0));
-    RECT titleRect = {app.pickerX + 10, app.pickerY + 10, app.pickerX + 190, app.pickerY + 30};
-    DrawText(hdc, L"Advanced Color Picker", -1, &titleRect, DT_CENTER);
-    
-    // HSV Color wheel (simplified)
-    int centerX = app.pickerX + 100;
-    int centerY = app.pickerY + 100;
-    int radius = 80;
-    
-    // Draw color wheel with small rectangles instead of pixels
-    for (int y = -radius; y <= radius; y += 2) {
-        for (int x = -radius; x <= radius; x += 2) {
-            float distance = sqrt(x * x + y * y);
-            if (distance <= radius) {
-                float angle = atan2(y, x) * 180.0f / 3.14159f;
-                if (angle < 0) angle += 360;
-                float saturation = distance / radius;
-                
-                COLORREF color = DrawingEngine::HSVtoRGB(angle, saturation, 0.9f);
-                
-                // Draw small rectangle instead of pixel
-                HBRUSH colorBrush = CreateSolidBrush(color);
-                RECT pixelRect = {centerX + x, centerY + y, centerX + x + 2, centerY + y + 2};
-                FillRect(hdc, &pixelRect, colorBrush);
-                DeleteObject(colorBrush);
+    // Check if GPU rendering is available and delegate accordingly
+    if (GPURenderer::GPURenderingEngine::GetContext().initialized) {
+        // Use client rect approximation for GPU version
+        RECT clientRect = {0, 0, 800, 600}; // Default size, GPU version uses app state positions
+        DrawAdvancedColorPickerGPU(clientRect);
+    } else {
+        // Original software-based implementation (fallback)
+        // Background
+        RECT pickerBg = {app.pickerX, app.pickerY, app.pickerX + 200, app.pickerY + 200};
+        HBRUSH bgBrush = CreateSolidBrush(RGB(240, 240, 240));
+        FillRect(hdc, &pickerBg, bgBrush);
+        DeleteObject(bgBrush);
+        
+        // Border
+        HPEN borderPen = CreatePen(PS_SOLID, 2, RGB(100, 100, 100));
+        HPEN oldPen = (HPEN)SelectObject(hdc, borderPen);
+        Rectangle(hdc, pickerBg.left, pickerBg.top, pickerBg.right, pickerBg.bottom);
+        SelectObject(hdc, oldPen);
+        DeleteObject(borderPen);
+        
+        // Title
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, RGB(0, 0, 0));
+        RECT titleRect = {app.pickerX + 10, app.pickerY + 10, app.pickerX + 190, app.pickerY + 30};
+        DrawText(hdc, L"Advanced Color Picker", -1, &titleRect, DT_CENTER);
+        
+        // HSV Color wheel (simplified)
+        int centerX = app.pickerX + 100;
+        int centerY = app.pickerY + 100;
+        int radius = 80;
+        
+        // Draw color wheel with small rectangles instead of pixels
+        for (int y = -radius; y <= radius; y += 2) {
+            for (int x = -radius; x <= radius; x += 2) {
+                float distance = sqrt(x * x + y * y);
+                if (distance <= radius) {
+                    float angle = atan2(y, x) * 180.0f / 3.14159f;
+                    if (angle < 0) angle += 360;
+                    float saturation = distance / radius;
+                    
+                    COLORREF color = DrawingEngine::HSVtoRGB(angle, saturation, 0.9f);
+                    
+                    // Draw small rectangle instead of pixel
+                    HBRUSH colorBrush = CreateSolidBrush(color);
+                    RECT pixelRect = {centerX + x, centerY + y, centerX + x + 2, centerY + y + 2};
+                    FillRect(hdc, &pixelRect, colorBrush);
+                    DeleteObject(colorBrush);
+                }
             }
         }
+        
+        // Current color display
+        RECT currentColorRect = {app.pickerX + 20, app.pickerY + 160, app.pickerX + 180, app.pickerY + 180};
+        HBRUSH currentBrush = CreateSolidBrush(app.currentColor);
+        FillRect(hdc, &currentColorRect, currentBrush);
+        DeleteObject(currentBrush);
     }
-    
-    // Current color display
-    RECT currentColorRect = {app.pickerX + 20, app.pickerY + 160, app.pickerX + 180, app.pickerY + 180};
-    HBRUSH currentBrush = CreateSolidBrush(app.currentColor);
-    FillRect(hdc, &currentColorRect, currentBrush);
-    DeleteObject(currentBrush);
 }
 
 HMENU CreateMenuBar()

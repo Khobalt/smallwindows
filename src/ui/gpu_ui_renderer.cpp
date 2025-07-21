@@ -255,4 +255,108 @@ void DrawToolbarSoftware(HDC hdc, RECT clientRect)
     }
 }
 
+void DrawStatusBarGPU(RECT clientRect)
+{
+    AppState& app = AppState::Instance();
+    
+    // Status bar colors
+    COLORREF statusBg = (app.currentTheme == THEME_LIGHT) ? RGB(240, 240, 240) : RGB(37, 37, 38);
+    COLORREF statusText = (app.currentTheme == THEME_LIGHT) ? RGB(0, 0, 0) : RGB(255, 255, 255);
+    
+    float statusTop = (float)(clientRect.bottom - STATUSBAR_HEIGHT);
+    float statusHeight = (float)STATUSBAR_HEIGHT;
+    
+    // Status bar background - GPU accelerated!
+    GPURenderer::GPURenderingEngine::FillRectangle(
+        0, statusTop, (float)clientRect.right, statusHeight, statusBg
+    );
+    
+    // Status text - GPU accelerated!
+    const WCHAR* toolName = (app.currentTool == TOOL_BRUSH) ? L"Brush" :
+                          (app.currentTool == TOOL_ERASER) ? L"Eraser" :
+                          (app.currentTool == TOOL_RECTANGLE) ? L"Rectangle" :
+                          (app.currentTool == TOOL_CIRCLE) ? L"Circle" :
+                          (app.currentTool == TOOL_LINE) ? L"Line" : L"Color Picker";
+    
+    // Format status text
+    WCHAR statusText1[200];
+    swprintf(statusText1, 200, L"Tool: %s | Size: %d | Zoom: %.0f%% | Grid: %s | Theme: %s | Points: %zu | F1: Help", 
+            toolName, app.brushSize, app.zoomLevel * 100,
+            app.showGrid ? L"On" : L"Off",
+            (app.currentTheme == THEME_LIGHT) ? L"Light" : L"Dark", 
+            app.drawingPoints.size());
+    
+    // Draw status text with GPU acceleration
+    GPURenderer::GPURenderingEngine::DrawText(
+        statusText1, 
+        10.0f, 
+        statusTop + 5.0f, 
+        (float)(clientRect.right - 20), 
+        statusHeight - 10.0f, 
+        statusText
+    );
+}
+
+void DrawAdvancedColorPickerGPU(RECT clientRect)
+{
+    AppState& app = AppState::Instance();
+    
+    if (!app.showAdvancedColorPicker) return;
+    
+    float pickerX = (float)app.pickerX;
+    float pickerY = (float)app.pickerY;
+    float pickerWidth = 200.0f;
+    float pickerHeight = 200.0f;
+    
+    // Background - GPU accelerated!
+    GPURenderer::GPURenderingEngine::FillRectangle(
+        pickerX, pickerY, pickerWidth, pickerHeight, RGB(240, 240, 240)
+    );
+    
+    // Border - GPU accelerated!
+    GPURenderer::GPURenderingEngine::DrawRectangle(
+        pickerX, pickerY, pickerWidth, pickerHeight, RGB(100, 100, 100), 2.0f
+    );
+    
+    // Title - GPU accelerated!
+    GPURenderer::GPURenderingEngine::DrawText(
+        L"Advanced Color Picker",
+        pickerX + 10.0f,
+        pickerY + 10.0f,
+        pickerWidth - 20.0f,
+        20.0f,
+        RGB(0, 0, 0)
+    );
+    
+    // Color wheel center
+    float centerX = pickerX + 100.0f;
+    float centerY = pickerY + 100.0f;
+    float radius = 80.0f;
+    
+    // Draw color wheel with GPU rectangles (much faster than SetPixel!)
+    for (int y = -80; y <= 80; y += 2) {
+        for (int x = -80; x <= 80; x += 2) {
+            float distance = sqrtf((float)(x * x + y * y));
+            if (distance <= radius) {
+                float angle = atan2f((float)y, (float)x) * 180.0f / 3.14159f;
+                if (angle < 0) angle += 360.0f;
+                float saturation = distance / radius;
+                
+                // Convert HSV to RGB (using our existing function)
+                COLORREF color = DrawingEngine::HSVtoRGB(angle, saturation, 0.9f);
+                
+                // Draw 2x2 pixel rectangle - GPU accelerated!
+                GPURenderer::GPURenderingEngine::FillRectangle(
+                    centerX + (float)x, centerY + (float)y, 2.0f, 2.0f, color
+                );
+            }
+        }
+    }
+    
+    // Current color display - GPU accelerated!
+    GPURenderer::GPURenderingEngine::FillRectangle(
+        pickerX + 20.0f, pickerY + 160.0f, 160.0f, 20.0f, app.currentColor
+    );
+}
+
 } // namespace UIRenderer

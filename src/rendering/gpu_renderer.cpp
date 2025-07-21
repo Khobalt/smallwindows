@@ -259,6 +259,22 @@ void GPURenderingEngine::DrawBrushStroke(const std::vector<D2D1_POINT_2F>& point
     }
 }
 
+void GPURenderingEngine::DrawBrushPreview(float x, float y, float brushSize) {
+    if (!context.renderTarget || !context.dynamicBrush) return;
+    
+    // Draw brush preview as a gray hollow circle
+    UpdateDynamicBrush(RGB(128, 128, 128), 0.8f);  // Semi-transparent gray
+    
+    D2D1_ELLIPSE ellipse = D2D1::Ellipse(
+        D2D1::Point2F(x, y),
+        brushSize / 2.0f,
+        brushSize / 2.0f
+    );
+    
+    // Draw hollow circle outline only
+    context.renderTarget->DrawEllipse(ellipse, context.dynamicBrush, 1.0f, context.dashedStroke);
+}
+
 void GPURenderingEngine::DrawIcon(float x, float y, const char* iconData, int width, int height, COLORREF color, float scale) {
     if (!context.renderTarget || !context.dynamicBrush || !iconData) return;
     

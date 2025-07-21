@@ -35,6 +35,10 @@ public:
     bool hoveredAdvancedPicker = false;
     bool hoveredThemeButton = false;
     
+    // Brush preview state
+    bool showBrushPreview = false;
+    int brushPreviewX = 0, brushPreviewY = 0;
+    
     // GDI+ token
     ULONG_PTR gdiplusToken;
     

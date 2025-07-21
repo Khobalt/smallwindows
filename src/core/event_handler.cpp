@@ -145,6 +145,7 @@ void OnPaintGPU(HWND hwnd, RECT clientRect)
     // Draw all drawing points - GPU accelerated!
     DrawPointsGPU();
     
+    
     // Reset transform for UI elements
     GPURenderer::GPURenderingEngine::ResetTransform();
     
@@ -348,6 +349,36 @@ void OnLeftButtonDown(HWND hwnd, int x, int y)
                 InvalidateToolbar(hwnd);
                 InvalidateStatusBar(hwnd);
             } else {
+                // Hide brush preview when starting to draw
+                if (app.showBrushPreview && app.currentTool == TOOL_BRUSH) {
+                    HDC hdc = GetDC(hwnd);
+                    SetROP2(hdc, R2_XORPEN);
+                    
+                    HPEN xorPen = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
+                    HPEN oldPen = (HPEN)SelectObject(hdc, xorPen);
+                    HBRUSH nullBrush = (HBRUSH)GetStockObject(NULL_BRUSH);
+                    HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, nullBrush);
+                    
+                    // Erase the preview
+                    int oldScreenX = WorldToScreenX(app.brushPreviewX, app);
+                    int oldScreenY = WorldToScreenY(app.brushPreviewY, app);
+                    int scaledBrushSize = (int)(app.brushSize * app.zoomLevel);
+                    
+                    Ellipse(hdc, 
+                           oldScreenX - scaledBrushSize/2, 
+                           oldScreenY - scaledBrushSize/2,
+                           oldScreenX + scaledBrushSize/2, 
+                           oldScreenY + scaledBrushSize/2);
+                    
+                    SelectObject(hdc, oldBrush);
+                    SelectObject(hdc, oldPen);
+                    DeleteObject(xorPen);
+                    SetROP2(hdc, R2_COPYPEN);
+                    ReleaseDC(hwnd, hdc);
+                    
+                    app.showBrushPreview = false;
+                }
+                
                 // Transform screen coordinates to world coordinates
                 int worldX = ScreenToWorldX(x, app);
                 int worldY = ScreenToWorldY(y, app);
@@ -441,6 +472,91 @@ void OnMouseMove(HWND hwnd, WPARAM wParam, int x, int y)
                 DeleteObject(xorPen);
                 SetROP2(hdc, R2_COPYPEN);
                 ReleaseDC(hwnd, hdc);
+            }
+        }
+    } else {
+        // Handle brush preview when NOT drawing (mouse button not pressed)
+        AppState& app = AppState::Instance();
+        RECT clientRect;
+        GetClientRect(hwnd, &clientRect);
+        
+        // Handle brush preview for drawing canvas area
+        bool inCanvasArea = (y > TOOLBAR_HEIGHT && y < clientRect.bottom - STATUSBAR_HEIGHT);
+        
+        if (inCanvasArea && app.currentTool == TOOL_BRUSH && !app.isDrawing) {
+            // Get DC for immediate drawing
+            HDC hdc = GetDC(hwnd);
+            SetROP2(hdc, R2_XORPEN);
+            
+            // Create XOR pen for preview circle
+            HPEN xorPen = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
+            HPEN oldPen = (HPEN)SelectObject(hdc, xorPen);
+            HBRUSH nullBrush = (HBRUSH)GetStockObject(NULL_BRUSH);
+            HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, nullBrush);
+            
+            // Erase old preview if it was showing
+            if (app.showBrushPreview) {
+                int oldScreenX = WorldToScreenX(app.brushPreviewX, app);
+                int oldScreenY = WorldToScreenY(app.brushPreviewY, app);
+                int scaledBrushSize = (int)(app.brushSize * app.zoomLevel);
+                
+                Ellipse(hdc, 
+                       oldScreenX - scaledBrushSize/2, 
+                       oldScreenY - scaledBrushSize/2,
+                       oldScreenX + scaledBrushSize/2, 
+                       oldScreenY + scaledBrushSize/2);
+            }
+            
+            // Transform screen coordinates to world coordinates and draw new preview
+            int worldX = ScreenToWorldX(x, app);
+            int worldY = ScreenToWorldY(y, app);
+            int scaledBrushSize = (int)(app.brushSize * app.zoomLevel);
+            
+            app.showBrushPreview = true;
+            app.brushPreviewX = worldX;
+            app.brushPreviewY = worldY;
+            
+            // Draw new preview circle
+            Ellipse(hdc, 
+                   x - scaledBrushSize/2, 
+                   y - scaledBrushSize/2,
+                   x + scaledBrushSize/2, 
+                   y + scaledBrushSize/2);
+            
+            SelectObject(hdc, oldBrush);
+            SelectObject(hdc, oldPen);
+            DeleteObject(xorPen);
+            SetROP2(hdc, R2_COPYPEN);
+            ReleaseDC(hwnd, hdc);
+        } else {
+            // Hide brush preview if moving outside canvas or not brush tool
+            if (app.showBrushPreview) {
+                HDC hdc = GetDC(hwnd);
+                SetROP2(hdc, R2_XORPEN);
+                
+                HPEN xorPen = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
+                HPEN oldPen = (HPEN)SelectObject(hdc, xorPen);
+                HBRUSH nullBrush = (HBRUSH)GetStockObject(NULL_BRUSH);
+                HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, nullBrush);
+                
+                // Erase the preview
+                int oldScreenX = WorldToScreenX(app.brushPreviewX, app);
+                int oldScreenY = WorldToScreenY(app.brushPreviewY, app);
+                int scaledBrushSize = (int)(app.brushSize * app.zoomLevel);
+                
+                Ellipse(hdc, 
+                       oldScreenX - scaledBrushSize/2, 
+                       oldScreenY - scaledBrushSize/2,
+                       oldScreenX + scaledBrushSize/2, 
+                       oldScreenY + scaledBrushSize/2);
+                
+                SelectObject(hdc, oldBrush);
+                SelectObject(hdc, oldPen);
+                DeleteObject(xorPen);
+                SetROP2(hdc, R2_COPYPEN);
+                ReleaseDC(hwnd, hdc);
+                
+                app.showBrushPreview = false;
             }
         }
     }

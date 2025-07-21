@@ -160,6 +160,11 @@ void SetTool(ToolType tool)
 {
     AppState& app = AppState::Instance();
     app.currentTool = tool;
+    
+    // Hide brush preview when switching away from brush tool
+    if (tool != TOOL_BRUSH) {
+        app.showBrushPreview = false;
+    }
 }
 
 void SetBrushSize(int size) 

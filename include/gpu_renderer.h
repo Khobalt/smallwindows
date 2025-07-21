@@ -57,6 +57,7 @@ public:
     
     // Advanced drawing
     static void DrawBrushStroke(const std::vector<D2D1_POINT_2F>& points, COLORREF color, float brushSize);
+    static void DrawBrushPreview(float x, float y, float brushSize);
     static void DrawIcon(float x, float y, const char* iconData, int width, int height, COLORREF color, float scale = 1.0f);
     static void DrawText(const WCHAR* text, float x, float y, float width, float height, COLORREF color);
     

@@ -1,5 +1,10 @@
 #include "../../include/drawing_engine.h"
 #include "../../include/app_state.h"
+#include <cstdio>
+#include <cstring>
+#include <cstdint>
+#include <algorithm>
+#include <cctype>
 
 namespace DrawingEngine {
 
@@ -296,6 +301,237 @@ void EraseAtPoint(int x, int y)
 COLORREF PickColorAt(HDC hdc, int x, int y) 
 {
     return GetPixel(hdc, x, y);
+}
+
+bool SaveDrawing(const std::string& filename)
+{
+    AppState& app = AppState::Instance();
+    
+    std::FILE* file = std::fopen(filename.c_str(), "wb");
+    if (!file) {
+        return false;
+    }
+    
+    // Write file header
+    const char header[] = "MPSP"; // Modern Paint Studio Pro
+    const uint32_t version = 1;
+    std::fwrite(header, 1, 4, file);
+    std::fwrite(&version, sizeof(uint32_t), 1, file);
+    
+    // Write number of points
+    uint32_t pointCount = static_cast<uint32_t>(app.drawingPoints.size());
+    std::fwrite(&pointCount, sizeof(uint32_t), 1, file);
+    
+    // Write drawing points
+    for (const DrawPoint& point : app.drawingPoints) {
+        std::fwrite(&point.x, sizeof(int), 1, file);
+        std::fwrite(&point.y, sizeof(int), 1, file);
+        std::fwrite(&point.color, sizeof(COLORREF), 1, file);
+        std::fwrite(&point.isStart, sizeof(bool), 1, file);
+        std::fwrite(&point.brushSize, sizeof(int), 1, file);
+        std::fwrite(&point.toolType, sizeof(ToolType), 1, file);
+    }
+    
+    std::fclose(file);
+    return true;
+}
+
+bool LoadDrawing(const std::string& filename)
+{
+    std::FILE* file = std::fopen(filename.c_str(), "rb");
+    if (!file) {
+        return false;
+    }
+    
+    // Read and verify header
+    char header[5] = {0};
+    uint32_t version;
+    if (std::fread(header, 1, 4, file) != 4 ||
+        std::strcmp(header, "MPSP") != 0 ||
+        std::fread(&version, sizeof(uint32_t), 1, file) != 1 ||
+        version != 1) {
+        std::fclose(file);
+        return false;
+    }
+    
+    // Read number of points
+    uint32_t pointCount;
+    if (std::fread(&pointCount, sizeof(uint32_t), 1, file) != 1) {
+        std::fclose(file);
+        return false;
+    }
+    
+    // Clear current drawing
+    AppState& app = AppState::Instance();
+    app.drawingPoints.clear();
+    
+    // Read drawing points
+    for (uint32_t i = 0; i < pointCount; i++) {
+        DrawPoint point;
+        if (std::fread(&point.x, sizeof(int), 1, file) != 1 ||
+            std::fread(&point.y, sizeof(int), 1, file) != 1 ||
+            std::fread(&point.color, sizeof(COLORREF), 1, file) != 1 ||
+            std::fread(&point.isStart, sizeof(bool), 1, file) != 1 ||
+            std::fread(&point.brushSize, sizeof(int), 1, file) != 1 ||
+            std::fread(&point.toolType, sizeof(ToolType), 1, file) != 1) {
+            std::fclose(file);
+            return false;
+        }
+        app.drawingPoints.push_back(point);
+    }
+    
+    std::fclose(file);
+    SaveState(); // Add to undo stack
+    return true;
+}
+
+bool ExportAsBitmap(const std::string& filename, int width, int height)
+{
+    AppState& app = AppState::Instance();
+    
+    // Create a bitmap
+    HDC hdcScreen = GetDC(NULL);
+    HDC hdcMem = CreateCompatibleDC(hdcScreen);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdcScreen, width, height);
+    HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMem, hBitmap);
+    
+    // Fill with white background
+    RECT rect = {0, 0, width, height};
+    FillRect(hdcMem, &rect, (HBRUSH)GetStockObject(WHITE_BRUSH));
+    
+    // Draw strokes properly by connecting points
+    if (!app.drawingPoints.empty()) {
+        HPEN currentPen = NULL;
+        HBRUSH currentBrush = NULL;
+        COLORREF currentColor = RGB(0, 0, 0);
+        int currentSize = 1;
+        
+        for (size_t i = 0; i < app.drawingPoints.size(); i++) {
+            const DrawPoint& point = app.drawingPoints[i];
+            
+            // Skip points outside canvas bounds
+            if (point.x < 0 || point.x >= width || point.y < 0 || point.y >= height) {
+                continue;
+            }
+            
+            // Create new pen/brush if color or size changed
+            if (currentColor != point.color || currentSize != point.brushSize) {
+                if (currentPen) DeleteObject(currentPen);
+                if (currentBrush) DeleteObject(currentBrush);
+                
+                currentColor = point.color;
+                currentSize = point.brushSize;
+                currentPen = CreatePen(PS_SOLID, currentSize, currentColor);
+                currentBrush = CreateSolidBrush(currentColor);
+            }
+            
+            // Handle different drawing tools
+            if (point.toolType == TOOL_BRUSH) {
+                SelectObject(hdcMem, currentPen);
+                
+                if (point.isStart) {
+                    // Start a new stroke
+                    MoveToEx(hdcMem, point.x, point.y, NULL);
+                } else {
+                    // Continue the stroke
+                    LineTo(hdcMem, point.x, point.y);
+                }
+                
+                // Also draw a circle at each point for brush texture
+                SelectObject(hdcMem, currentBrush);
+                int radius = currentSize / 2;
+                Ellipse(hdcMem, 
+                       point.x - radius, point.y - radius, 
+                       point.x + radius, point.y + radius);
+            }
+            else if (point.toolType == TOOL_ERASER) {
+                // Draw white circles for eraser
+                HBRUSH whiteBrush = CreateSolidBrush(RGB(255, 255, 255));
+                SelectObject(hdcMem, whiteBrush);
+                int radius = currentSize / 2;
+                Ellipse(hdcMem, 
+                       point.x - radius, point.y - radius, 
+                       point.x + radius, point.y + radius);
+                DeleteObject(whiteBrush);
+            }
+            else {
+                // For shapes (rectangle, circle, line), just draw points for now
+                // The actual shape reconstruction would require more complex logic
+                SelectObject(hdcMem, currentBrush);
+                int radius = std::max(1, currentSize / 2);
+                Ellipse(hdcMem, 
+                       point.x - radius, point.y - radius, 
+                       point.x + radius, point.y + radius);
+            }
+        }
+        
+        // Cleanup
+        if (currentPen) DeleteObject(currentPen);
+        if (currentBrush) DeleteObject(currentBrush);
+    }
+    
+    // Save bitmap using GDI+
+    SelectObject(hdcMem, hOldBitmap);
+    
+    // Convert filename to wide string
+    std::wstring wFilename(filename.begin(), filename.end());
+    
+    Bitmap bitmap(hBitmap, NULL);
+    CLSID pngClsid;
+    GetEncoderClsid(L"image/png", &pngClsid);
+    Status status = bitmap.Save(wFilename.c_str(), &pngClsid, NULL);
+    
+    // Cleanup
+    DeleteDC(hdcMem);
+    DeleteObject(hBitmap);
+    ReleaseDC(NULL, hdcScreen);
+    
+    return status == Ok;
+}
+
+// Helper function to get encoder CLSID for bitmap export
+int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
+{
+    UINT num = 0;
+    UINT size = 0;
+    
+    GetImageEncodersSize(&num, &size);
+    if (size == 0) return -1;
+    
+    ImageCodecInfo* pImageCodecInfo = (ImageCodecInfo*)(malloc(size));
+    if (pImageCodecInfo == NULL) return -1;
+    
+    GetImageEncoders(num, size, pImageCodecInfo);
+    
+    for (UINT j = 0; j < num; ++j) {
+        if (wcscmp(pImageCodecInfo[j].MimeType, format) == 0) {
+            *pClsid = pImageCodecInfo[j].Clsid;
+            free(pImageCodecInfo);
+            return j;
+        }
+    }
+    
+    free(pImageCodecInfo);
+    return -1;
+}
+
+std::string EnsureFileExtension(const std::string& filename, const std::string& extension)
+{
+    // Check if filename already has the extension (case insensitive)
+    std::string lowerFilename = filename;
+    std::string lowerExtension = extension;
+    
+    // Convert to lowercase for comparison
+    std::transform(lowerFilename.begin(), lowerFilename.end(), lowerFilename.begin(), ::tolower);
+    std::transform(lowerExtension.begin(), lowerExtension.end(), lowerExtension.begin(), ::tolower);
+    
+    // Check if it already ends with the extension
+    if (lowerFilename.length() >= lowerExtension.length() &&
+        lowerFilename.substr(lowerFilename.length() - lowerExtension.length()) == lowerExtension) {
+        return filename; // Already has extension
+    }
+    
+    return filename + extension;
 }
 
 } // namespace DrawingEngine

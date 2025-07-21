@@ -26,6 +26,15 @@ namespace DrawingEngine {
     bool Undo();
     bool Redo();
     
+    // File operations
+    bool SaveDrawing(const std::string& filename);
+    bool LoadDrawing(const std::string& filename);
+    bool ExportAsBitmap(const std::string& filename, int width, int height);
+    
+    // Helper functions for file operations
+    int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
+    std::string EnsureFileExtension(const std::string& filename, const std::string& extension);
+    
     // Tool operations
     void SetTool(ToolType tool);
     void SetBrushSize(int size);

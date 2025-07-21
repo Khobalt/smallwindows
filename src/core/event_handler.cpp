@@ -497,6 +497,7 @@ void OnRightButtonDown(HWND hwnd, int x, int y)
     // Create context menu
     HMENU hMenu = CreatePopupMenu();
     AppendMenu(hMenu, MF_STRING, IDM_FILE_NEW, L"New Canvas\tCtrl+N");
+    AppendMenu(hMenu, MF_STRING, IDM_FILE_OPEN, L"Open File\tCtrl+O");
     AppendMenu(hMenu, MF_STRING, IDM_FILE_SAVE, L"Save Image\tCtrl+S");
     AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
     AppendMenu(hMenu, MF_STRING, IDM_EDIT_UNDO, L"Undo\tCtrl+Z");
@@ -560,6 +561,12 @@ void OnKeyDown(HWND hwnd, WPARAM wParam)
         case 'S':
             if (ctrlPressed) {
                 OnCommand(hwnd, MAKEWPARAM(IDM_FILE_SAVE, 0));
+            }
+            break;
+            
+        case 'O':
+            if (ctrlPressed) {
+                OnCommand(hwnd, MAKEWPARAM(IDM_FILE_OPEN, 0));
             }
             break;
             
@@ -650,7 +657,7 @@ void OnCommand(HWND hwnd, WPARAM wParam)
             ofn.hwndOwner = hwnd;
             ofn.lpstrFile = szFile;
             ofn.nMaxFile = sizeof(szFile);
-            ofn.lpstrFilter = L"Bitmap Files (*.bmp)\0*.BMP\0All Files (*.*)\0*.*\0";
+            ofn.lpstrFilter = L"Paint Studio Files (*.mpsp)\0*.MPSP\0PNG Files (*.png)\0*.PNG\0All Files (*.*)\0*.*\0";
             ofn.nFilterIndex = 1;
             ofn.lpstrFileTitle = NULL;
             ofn.nMaxFileTitle = 0;
@@ -658,20 +665,74 @@ void OnCommand(HWND hwnd, WPARAM wParam)
             ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
             
             if (GetSaveFileName(&ofn)) {
-                // Simplified save implementation
-                HDC hdcWindow = GetDC(hwnd);
-                HDC hdcMem = CreateCompatibleDC(hdcWindow);
-                RECT rect;
-                GetClientRect(hwnd, &rect);
-                HBITMAP hbmp = CreateCompatibleBitmap(hdcWindow, rect.right, rect.bottom);
-                SelectObject(hdcMem, hbmp);
-                BitBlt(hdcMem, 0, 0, rect.right, rect.bottom, hdcWindow, 0, 0, SRCCOPY);
+                std::string filename;
+                filename.resize(WideCharToMultiByte(CP_UTF8, 0, szFile, -1, NULL, 0, NULL, NULL));
+                WideCharToMultiByte(CP_UTF8, 0, szFile, -1, &filename[0], filename.size(), NULL, NULL);
+                filename.resize(strlen(filename.c_str())); // Remove null terminator
                 
-                // Simple bitmap save would require more complex implementation
-                MessageBox(hwnd, L"Save feature implemented! (Simplified version)", L"Save", MB_OK);
+                // Determine file type from filter index and ensure proper extension
+                bool success = false;
+                if (ofn.nFilterIndex == 1) {
+                    // Save as native format - ensure .mpsp extension
+                    filename = DrawingEngine::EnsureFileExtension(filename, ".mpsp");
+                    success = DrawingEngine::SaveDrawing(filename);
+                } else if (ofn.nFilterIndex == 2) {
+                    // Export as PNG - ensure .png extension
+                    filename = DrawingEngine::EnsureFileExtension(filename, ".png");
+                    RECT rect;
+                    GetClientRect(hwnd, &rect);
+                    success = DrawingEngine::ExportAsBitmap(filename, rect.right, rect.bottom - TOOLBAR_HEIGHT - STATUSBAR_HEIGHT);
+                } else {
+                    // All files - determine by existing extension or default to native format
+                    if (filename.find(".png") != std::string::npos) {
+                        filename = DrawingEngine::EnsureFileExtension(filename, ".png");
+                        RECT rect;
+                        GetClientRect(hwnd, &rect);
+                        success = DrawingEngine::ExportAsBitmap(filename, rect.right, rect.bottom - TOOLBAR_HEIGHT - STATUSBAR_HEIGHT);
+                    } else {
+                        filename = DrawingEngine::EnsureFileExtension(filename, ".mpsp");
+                        success = DrawingEngine::SaveDrawing(filename);
+                    }
+                }
                 
-                DeleteDC(hdcMem);
-                ReleaseDC(hwnd, hdcWindow);
+                if (success) {
+                    MessageBox(hwnd, L"File saved successfully!", L"Save", MB_OK | MB_ICONINFORMATION);
+                } else {
+                    MessageBox(hwnd, L"Failed to save file!", L"Error", MB_OK | MB_ICONERROR);
+                }
+            }
+            break;
+        }
+        
+        case IDM_FILE_OPEN:
+        {
+            OPENFILENAME ofn;
+            WCHAR szFile[260] = {0};
+            
+            ZeroMemory(&ofn, sizeof(ofn));
+            ofn.lStructSize = sizeof(ofn);
+            ofn.hwndOwner = hwnd;
+            ofn.lpstrFile = szFile;
+            ofn.nMaxFile = sizeof(szFile);
+            ofn.lpstrFilter = L"Paint Studio Files (*.mpsp)\0*.MPSP\0All Files (*.*)\0*.*\0";
+            ofn.nFilterIndex = 1;
+            ofn.lpstrFileTitle = NULL;
+            ofn.nMaxFileTitle = 0;
+            ofn.lpstrInitialDir = NULL;
+            ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+            
+            if (GetOpenFileName(&ofn)) {
+                std::string filename;
+                filename.resize(WideCharToMultiByte(CP_UTF8, 0, szFile, -1, NULL, 0, NULL, NULL));
+                WideCharToMultiByte(CP_UTF8, 0, szFile, -1, &filename[0], filename.size(), NULL, NULL);
+                filename.resize(strlen(filename.c_str())); // Remove null terminator
+                
+                if (DrawingEngine::LoadDrawing(filename)) {
+                    InvalidateRect(hwnd, NULL, FALSE);
+                    MessageBox(hwnd, L"File loaded successfully!", L"Open", MB_OK | MB_ICONINFORMATION);
+                } else {
+                    MessageBox(hwnd, L"Failed to load file!", L"Error", MB_OK | MB_ICONERROR);
+                }
             }
             break;
         }

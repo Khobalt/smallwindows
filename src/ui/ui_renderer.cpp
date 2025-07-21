@@ -127,6 +127,7 @@ HMENU CreateMenuBar()
 
     // File Menu
     AppendMenu(hFileMenu, MF_STRING, IDM_FILE_NEW, L"&New\tCtrl+N");
+    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_OPEN, L"&Open\tCtrl+O");
     AppendMenu(hFileMenu, MF_SEPARATOR, 0, NULL);
     AppendMenu(hFileMenu, MF_STRING, IDM_FILE_SAVE, L"&Save\tCtrl+S");
     AppendMenu(hFileMenu, MF_STRING, IDM_FILE_SAVEAS, L"Save &As...");

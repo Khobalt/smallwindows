@@ -3,7 +3,7 @@
 
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -O2
-LIBS = -lgdiplus -lcomdlg32
+LIBS = -lgdiplus -lcomdlg32 -ld2d1 -ldwrite -lwindowscodecs -lole32
 WINFLAGS = -mwindows
 
 # Directory structure
@@ -15,12 +15,13 @@ TEST_DIR = tests
 
 # Source files organized by module
 CORE_SOURCES = $(SRC_DIR)/core/types.cpp $(SRC_DIR)/core/config.cpp $(SRC_DIR)/core/app_state.cpp $(SRC_DIR)/core/event_handler.cpp
-UI_SOURCES = $(SRC_DIR)/ui/ui_renderer.cpp $(SRC_DIR)/ui/icon_renderer.cpp
+UI_SOURCES = $(SRC_DIR)/ui/ui_renderer.cpp $(SRC_DIR)/ui/gpu_ui_renderer.cpp $(SRC_DIR)/ui/icon_renderer.cpp
 DRAWING_SOURCES = $(SRC_DIR)/drawing/drawing_engine.cpp
+RENDERING_SOURCES = $(SRC_DIR)/rendering/gpu_renderer.cpp
 MAIN_SOURCE = $(SRC_DIR)/main.cpp
 
 # All application sources
-APP_SOURCES = $(CORE_SOURCES) $(UI_SOURCES) $(DRAWING_SOURCES) $(MAIN_SOURCE)
+APP_SOURCES = $(CORE_SOURCES) $(UI_SOURCES) $(DRAWING_SOURCES) $(RENDERING_SOURCES) $(MAIN_SOURCE)
 
 # Test sources
 TEST_FRAMEWORK = $(TEST_DIR)/test_framework.h
@@ -31,8 +32,9 @@ UNIT_TESTS = $(shell find $(TEST_DIR)/unit -name "*.cpp" 2>/dev/null || echo "")
 CORE_OBJECTS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(CORE_SOURCES))
 UI_OBJECTS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(UI_SOURCES))
 DRAWING_OBJECTS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(DRAWING_SOURCES))
+RENDERING_OBJECTS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(RENDERING_SOURCES))
 MAIN_OBJECT = $(BUILD_DIR)/main.o
-APP_OBJECTS = $(CORE_OBJECTS) $(UI_OBJECTS) $(DRAWING_OBJECTS) $(MAIN_OBJECT)
+APP_OBJECTS = $(CORE_OBJECTS) $(UI_OBJECTS) $(DRAWING_OBJECTS) $(RENDERING_OBJECTS) $(MAIN_OBJECT)
 
 # Executables
 MAIN_EXE = $(BIN_DIR)/modernpaint.exe
@@ -46,7 +48,7 @@ all: $(MAIN_EXE)
 
 # Create directories if they don't exist
 $(BUILD_DIR):
-	@mkdir -p $(BUILD_DIR)/core $(BUILD_DIR)/ui $(BUILD_DIR)/drawing
+	@mkdir -p $(BUILD_DIR)/core $(BUILD_DIR)/ui $(BUILD_DIR)/drawing $(BUILD_DIR)/rendering
 	@echo "✓ Created build directories"
 
 $(BIN_DIR):
@@ -70,6 +72,10 @@ $(BUILD_DIR)/ui/%.o: $(SRC_DIR)/ui/%.cpp
 
 $(BUILD_DIR)/drawing/%.o: $(SRC_DIR)/drawing/%.cpp
 	@echo "✏️ Compiling drawing module: $<"
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+$(BUILD_DIR)/rendering/%.o: $(SRC_DIR)/rendering/%.cpp
+	@echo "🎮 Compiling GPU rendering module: $<"
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 $(BUILD_DIR)/main.o: $(SRC_DIR)/main.cpp

@@ -4,10 +4,17 @@
 #include "../include/ui_renderer.h"
 #include "../include/drawing_engine.h"
 #include "../include/event_handler.h"
+#include "../include/gpu_renderer.h"
 
 int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow)
 {
     AppState& app = AppState::Instance();
+    
+    // Initialize COM for DirectX components
+    if (FAILED(CoInitialize(nullptr))) {
+        MessageBoxW(NULL, L"Failed to initialize COM", L"Error", MB_OK | MB_ICONERROR);
+        return 1;
+    }
     
     // Initialize GDI+
     GdiplusStartupInput gdiplusStartupInput;
@@ -50,6 +57,12 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszA
         hThisInstance,
         NULL);
 
+    // Initialize GPU renderer after window creation
+    if (!GPURenderer::GPURenderingEngine::Initialize(hwnd)) {
+        MessageBoxW(NULL, L"Failed to initialize GPU renderer. Falling back to software rendering.", 
+                   L"Performance Warning", MB_OK | MB_ICONWARNING);
+    }
+    
     // Make the window visible on the screen
     ShowWindow(hwnd, nCmdShow);
     SetForegroundWindow(hwnd);
@@ -62,8 +75,14 @@ int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszA
         DispatchMessage(&messages);
     }
 
+    // Cleanup GPU renderer
+    GPURenderer::GPURenderingEngine::Shutdown();
+    
     // Cleanup GDI+
     GdiplusShutdown(app.gdiplusToken);
+    
+    // Cleanup COM
+    CoUninitialize();
 
     return messages.wParam;
 }

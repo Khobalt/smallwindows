@@ -3,6 +3,7 @@
 #include "../../include/app_state.h"
 #include "../../include/ui_renderer.h"
 #include "../../include/drawing_engine.h"
+#include "../../include/gpu_renderer.h"
 
 // Forward declaration for main window procedure
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -102,12 +103,63 @@ static void InvalidateStatusBar(HWND hwnd) {
 
 void OnPaint(HWND hwnd)
 {
-    AppState& app = AppState::Instance();
     PAINTSTRUCT ps;
     HDC hdc = BeginPaint(hwnd, &ps);
     
     RECT clientRect;
     GetClientRect(hwnd, &clientRect);
+    
+    // Check if GPU rendering is available
+    bool useGPU = GPURenderer::GPURenderingEngine::GetContext().initialized;
+    
+    if (useGPU) {
+        OnPaintGPU(hwnd, clientRect);
+    } else {
+        OnPaintSoftware(hdc, clientRect);
+    }
+    
+    EndPaint(hwnd, &ps);
+}
+
+void OnPaintGPU(HWND hwnd, RECT clientRect)
+{
+    AppState& app = AppState::Instance();
+    
+    // Begin GPU rendering
+    GPURenderer::GPURenderingEngine::BeginDraw();
+    
+    // Clear background with GPU
+    COLORREF bgColor = (app.currentTheme == THEME_LIGHT) ? RGB(255, 255, 255) : RGB(30, 30, 30);
+    GPURenderer::GPURenderingEngine::Clear(bgColor);
+    
+    // Set up zoom and pan transform
+    D2D1_MATRIX_3X2_F transform = D2D1::Matrix3x2F::Scale(app.zoomLevel, app.zoomLevel) *
+                                   D2D1::Matrix3x2F::Translation((float)app.panX, (float)(app.panY + TOOLBAR_HEIGHT));
+    GPURenderer::GPURenderingEngine::SetTransform(transform);
+    
+    // Draw grid if enabled - GPU accelerated!
+    if (app.showGrid) {
+        DrawGridGPU(clientRect);
+    }
+    
+    // Draw all drawing points - GPU accelerated!
+    DrawPointsGPU();
+    
+    // Reset transform for UI elements
+    GPURenderer::GPURenderingEngine::ResetTransform();
+    
+    // Draw UI elements - GPU accelerated!
+    UIRenderer::DrawToolbarGPU(clientRect);
+    // Note: Status bar and color picker still use software rendering for now
+    // Will be ported in next phase
+    
+    // End GPU rendering
+    GPURenderer::GPURenderingEngine::EndDraw();
+}
+
+void OnPaintSoftware(HDC hdc, RECT clientRect)
+{
+    AppState& app = AppState::Instance();
     
     // Double buffering: Create memory DC and bitmap
     HDC memDC = CreateCompatibleDC(hdc);
@@ -224,8 +276,6 @@ void OnPaint(HWND hwnd)
     SelectObject(memDC, oldBitmap);
     DeleteObject(memBitmap);
     DeleteDC(memDC);
-    
-    EndPaint(hwnd, &ps);
 }
 
 void OnLeftButtonDown(HWND hwnd, int x, int y)
@@ -750,6 +800,72 @@ void OnMouseHover(HWND hwnd, int x, int y)
 void OnSize(HWND hwnd, WPARAM wParam, LPARAM lParam)
 {
     InvalidateRect(hwnd, NULL, FALSE);
+}
+
+void DrawGridGPU(RECT clientRect)
+{
+    AppState& app = AppState::Instance();
+    
+    COLORREF gridColor = (app.currentTheme == THEME_LIGHT) ? RGB(200, 200, 200) : RGB(100, 100, 100);
+    float gridSize = 20.0f * app.zoomLevel;
+    
+    // Draw vertical grid lines
+    for (float x = (float)(app.panX % (int)gridSize); x < clientRect.right; x += gridSize) {
+        GPURenderer::GPURenderingEngine::DrawLine(
+            x, (float)TOOLBAR_HEIGHT, 
+            x, (float)(clientRect.bottom - STATUSBAR_HEIGHT), 
+            gridColor, 1.0f
+        );
+    }
+    
+    // Draw horizontal grid lines  
+    for (float y = (float)(TOOLBAR_HEIGHT + (app.panY % (int)gridSize)); y < clientRect.bottom - STATUSBAR_HEIGHT; y += gridSize) {
+        GPURenderer::GPURenderingEngine::DrawLine(
+            0, y, 
+            (float)clientRect.right, y, 
+            gridColor, 1.0f
+        );
+    }
+}
+
+void DrawPointsGPU()
+{
+    AppState& app = AppState::Instance();
+    
+    if (app.drawingPoints.empty()) return;
+    
+    // Convert drawing points to GPU format and render them
+    std::vector<D2D1_POINT_2F> currentStroke;
+    DrawPoint* prevPoint = nullptr;
+    
+    for (size_t i = 0; i < app.drawingPoints.size(); i++) {
+        const DrawPoint& point = app.drawingPoints[i];
+        
+        if (point.isStart) {
+            // Finish previous stroke if any
+            if (!currentStroke.empty()) {
+                GPURenderer::GPURenderingEngine::DrawBrushStroke(
+                    currentStroke, prevPoint->color, (float)prevPoint->brushSize
+                );
+                currentStroke.clear();
+            }
+            
+            // Start new stroke
+            currentStroke.push_back(D2D1::Point2F((float)point.x, (float)point.y));
+            prevPoint = const_cast<DrawPoint*>(&point);
+        } else if (prevPoint != nullptr) {
+            // Continue stroke
+            currentStroke.push_back(D2D1::Point2F((float)point.x, (float)point.y));
+            prevPoint = const_cast<DrawPoint*>(&point);
+        }
+    }
+    
+    // Finish last stroke
+    if (!currentStroke.empty() && prevPoint) {
+        GPURenderer::GPURenderingEngine::DrawBrushStroke(
+            currentStroke, prevPoint->color, (float)prevPoint->brushSize
+        );
+    }
 }
 
 } // namespace EventHandler

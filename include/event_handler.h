@@ -21,7 +21,13 @@ namespace EventHandler {
     
     // Window events
     void OnPaint(HWND hwnd);
+    void OnPaintGPU(HWND hwnd, RECT clientRect);
+    void OnPaintSoftware(HDC hdc, RECT clientRect);
     void OnSize(HWND hwnd, WPARAM wParam, LPARAM lParam);
+    
+    // GPU rendering helpers
+    void DrawGridGPU(RECT clientRect);
+    void DrawPointsGPU();
 }
 
 #endif // EVENT_HANDLER_H
